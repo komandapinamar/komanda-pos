@@ -1,21 +1,11 @@
-# Dependencies
-node_modules/
-
-# Astro generated files
-.astro/
-dist/
-
-# Environment variables
-.env
-.env.*
-!.env.example
-
-# Logs and coverage
-*.log
-coverage/
-
-# Editor and operating system files
+*.iml
+.gradle
+/local.properties
+local.properties
 .idea/
-.vscode/
 .DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
 
