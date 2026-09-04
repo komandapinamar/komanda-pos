@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -11,9 +12,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -23,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -50,11 +55,15 @@ fun LoginScreen(
     isLoading: Boolean,
     errorMessage: String?,
     onLogin: (email: String, password: String) -> Unit,
+    serverUrl: String = "",
+    onServerUrlChanged: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
+    var showServerDialog by remember { mutableStateOf(false) }
+    var tempServerUrl by remember(serverUrl) { mutableStateOf(serverUrl) }
 
     Box(
         modifier = modifier
@@ -73,7 +82,8 @@ fun LoginScreen(
             Column(
                 modifier = Modifier
                     .padding(32.dp)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
@@ -191,6 +201,89 @@ fun LoginScreen(
                             text = "Iniciar Sesión",
                             fontWeight = FontWeight.SemiBold,
                             fontSize = 16.sp
+                        )
+                    }
+                }
+
+                if (onServerUrlChanged != null && serverUrl.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    TextButton(
+                        onClick = {
+                            tempServerUrl = serverUrl
+                            showServerDialog = true
+                        }
+                    ) {
+                        Text(
+                            text = "Servidor: $serverUrl",
+                            color = Zinc400,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+
+                    if (showServerDialog) {
+                        AlertDialog(
+                            onDismissRequest = { showServerDialog = false },
+                            containerColor = Zinc900,
+                            title = {
+                                Text(
+                                    text = "Servidor backend",
+                                    color = Amber400,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            },
+                            text = {
+                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text(
+                                        text = "URL del servidor Komanda (ej: para Telpo físico en Wi-Fi o emulador):",
+                                        color = Zinc400,
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                    OutlinedTextField(
+                                        value = tempServerUrl,
+                                        onValueChange = { tempServerUrl = it },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = Amber400,
+                                            unfocusedBorderColor = Zinc800,
+                                            focusedTextColor = Color.White,
+                                            unfocusedTextColor = Color.White,
+                                            cursorColor = Amber400
+                                        )
+                                    )
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        TextButton(onClick = { tempServerUrl = "http://127.0.0.1:3000" }) {
+                                            Text("127.0.0.1 (USB)", fontSize = 11.sp, color = Amber400)
+                                        }
+                                        TextButton(onClick = { tempServerUrl = "http://10.0.2.2:3000" }) {
+                                            Text("10.0.2.2 (AVD)", fontSize = 11.sp, color = Amber400)
+                                        }
+                                    }
+                                }
+                            },
+                            confirmButton = {
+                                Button(
+                                    onClick = {
+                                        showServerDialog = false
+                                        val trimmed = tempServerUrl.trim().trimEnd('/')
+                                        if (trimmed.isNotBlank()) {
+                                            onServerUrlChanged(trimmed)
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Amber400,
+                                        contentColor = Zinc950
+                                    )
+                                ) {
+                                    Text("Guardar")
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showServerDialog = false }) {
+                                    Text("Cancelar", color = Zinc400)
+                                }
+                            }
                         )
                     }
                 }

@@ -54,12 +54,37 @@ class MainActivity : ComponentActivity() {
     private var activePosManager: PosManager? = null
     private var activeBillingService: BillingService? = null
 
-    // Base URL defaults to 10.0.2.2:3000 for local Android emulator, configurable if needed
-    private val defaultBaseUrl = "http://10.0.2.2:3000"
+    private var currentBaseUrl by mutableStateOf("http://127.0.0.1:3000")
+
+    private fun updateServerUrl(newUrl: String) {
+        val trimmed = newUrl.trim().trimEnd('/')
+        if (trimmed.isBlank() || trimmed == currentBaseUrl) return
+        currentBaseUrl = trimmed
+        getSharedPreferences("komanda_pos_prefs", MODE_PRIVATE)
+            .edit()
+            .putString("server_base_url", trimmed)
+            .apply()
+
+        api = NetworkClient.create(
+            baseUrl = trimmed,
+            tokenProvider = { authManager.currentToken }
+        )
+        val sessionStorage = SecureSessionStorage(this)
+        authManager = AuthManager(
+            api = api,
+            sessionStorage = sessionStorage
+        )
+        lifecycleScope.launch {
+            authManager.initialize()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        val prefs = getSharedPreferences("komanda_pos_prefs", MODE_PRIVATE)
+        currentBaseUrl = prefs.getString("server_base_url", "http://127.0.0.1:3000") ?: "http://127.0.0.1:3000"
 
         // 1. Audio Announcer (Native Android TextToSpeech offline for speaker)
         announcer = OrderAnnouncer(this)
@@ -72,7 +97,7 @@ class MainActivity : ComponentActivity() {
 
         // 3. Network API configured with dynamic bearer token provider
         api = NetworkClient.create(
-            baseUrl = defaultBaseUrl,
+            baseUrl = currentBaseUrl,
             tokenProvider = { authManager.currentToken }
         )
 
@@ -114,6 +139,8 @@ class MainActivity : ComponentActivity() {
                         LoginScreen(
                             isLoading = state is AuthState.Loading,
                             errorMessage = (state as? AuthState.Error)?.message,
+                            serverUrl = currentBaseUrl,
+                            onServerUrlChanged = { updateServerUrl(it) },
                             onLogin = { email, password ->
                                 lifecycleScope.launch {
                                     authManager.login(email, password)
@@ -122,6 +149,11 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     is AuthState.SelectTenant -> {
+                        activeOrderManager?.stopListening()
+                        activeOrderManager = null
+                        activePosManager = null
+                        activeBillingService = null
+
                         TenantSelectionScreen(
                             tenants = state.tenants,
                             onSelectTenant = { tenantId ->
@@ -142,6 +174,11 @@ class MainActivity : ComponentActivity() {
                         )
                     }
                     is AuthState.NoActiveTenant -> {
+                        activeOrderManager?.stopListening()
+                        activeOrderManager = null
+                        activePosManager = null
+                        activeBillingService = null
+
                         NoActiveTenantScreen(
                             onLogout = {
                                 lifecycleScope.launch {
@@ -153,9 +190,9 @@ class MainActivity : ComponentActivity() {
                     is AuthState.Authenticated -> {
                         val session = state.session
 
-                        val orderMgr = remember(session.tenantId, session.token) {
+                        val orderMgr = remember(session.tenantId, session.token, currentBaseUrl) {
                             val sseListener = SseOrderEventListener(
-                                baseUrl = defaultBaseUrl,
+                                baseUrl = currentBaseUrl,
                                 tenantId = session.tenantId,
                                 authToken = session.token
                             )

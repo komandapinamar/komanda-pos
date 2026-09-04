@@ -49,9 +49,14 @@ class AuthManager(
         try {
             val response = api.getMobileContext("Bearer ${session.token}")
             if (!response.isSuccessful || response.body() == null) {
-                Log.w(tag, "Persisted session invalid or revoked on server (${response.code()}). Clearing storage.")
-                sessionStorage.clearSession()
-                _authState.value = AuthState.LoggedOut
+                if (response.code() == 401) {
+                    Log.w(tag, "Persisted session revoked or expired on server (401). Clearing storage.")
+                    sessionStorage.clearSession()
+                    _authState.value = AuthState.LoggedOut
+                } else {
+                    Log.w(tag, "Transient server error during context validation (${response.code()}). Keeping session.")
+                    _authState.value = AuthState.Error("Error de conexión con el servidor (${response.code()}).")
+                }
                 return
             }
 
@@ -90,8 +95,13 @@ class AuthManager(
             }
         } catch (e: Exception) {
             Log.e(tag, "Failed to validate session context", e)
-            sessionStorage.clearSession()
-            _authState.value = AuthState.LoggedOut
+            if (e is java.io.IOException) {
+                // Network unreachable or timeout — do not destroy stored credentials
+                _authState.value = AuthState.Error("No se pudo conectar con el servidor. Verificá la conexión.")
+            } else {
+                sessionStorage.clearSession()
+                _authState.value = AuthState.LoggedOut
+            }
         }
     }
 
@@ -106,7 +116,12 @@ class AuthManager(
             )
 
             if (!loginRes.isSuccessful || loginRes.body() == null) {
-                _authState.value = AuthState.Error("Credenciales inválidas. Verificá tu usuario y contraseña.")
+                val errorMsg = if (loginRes.code() == 401) {
+                    "Credenciales inválidas. Verificá tu usuario y contraseña."
+                } else {
+                    "Error de autenticación (${loginRes.code()}). Intente nuevamente."
+                }
+                _authState.value = AuthState.Error(errorMsg)
                 return false
             }
 
@@ -114,7 +129,7 @@ class AuthManager(
             val contextRes = api.getMobileContext("Bearer ${loginData.token}")
 
             if (!contextRes.isSuccessful || contextRes.body() == null) {
-                _authState.value = AuthState.Error("Error al obtener contexto operativo.")
+                _authState.value = AuthState.Error("Error al obtener contexto operativo (${contextRes.code()}).")
                 return false
             }
 
@@ -150,7 +165,12 @@ class AuthManager(
             return true
         } catch (e: Exception) {
             Log.e(tag, "Login exception", e)
-            _authState.value = AuthState.Error("Credenciales inválidas. Verificá tu usuario y contraseña.")
+            val message = if (e is java.io.IOException) {
+                "No se pudo conectar con el servidor. Verificá tu conexión a internet."
+            } else {
+                "Error inesperado al iniciar sesión."
+            }
+            _authState.value = AuthState.Error(message)
             return false
         }
     }
@@ -161,6 +181,13 @@ class AuthManager(
         tenantId: String,
         availableTenants: List<MobileTenantDto>
     ): Boolean {
+        if (isExpired(expiresAt)) {
+            Log.w(tag, "Session expired while selecting tenant.")
+            sessionStorage.clearSession()
+            _authState.value = AuthState.LoggedOut
+            return false
+        }
+
         val selected = availableTenants.find { it.id == tenantId }
         if (selected == null) {
             _authState.value = AuthState.Error("Restaurante no autorizado.")
@@ -181,8 +208,16 @@ class AuthManager(
     }
 
     suspend fun logout() {
+        val token = currentToken
         sessionStorage.clearSession()
         _authState.value = AuthState.LoggedOut
+        if (token != null) {
+            try {
+                api.mobileRevokeSession("Bearer $token")
+            } catch (e: Exception) {
+                Log.w(tag, "Failed to revoke session on server during logout: ${e.message}")
+            }
+        }
     }
 
     fun clearError() {
@@ -198,13 +233,17 @@ class AuthManager(
 
     private fun parseIsoTimestamp(isoDate: String): Long? {
         return try {
-            val cleaned = isoDate.split(".")[0].replace("Z", "")
-            val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
-                timeZone = TimeZone.getTimeZone("UTC")
+            java.time.Instant.parse(isoDate).toEpochMilli()
+        } catch (_: Throwable) {
+            try {
+                val cleaned = isoDate.split(".")[0].replace("Z", "")
+                val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }
+                format.parse(cleaned)?.time
+            } catch (_: Exception) {
+                null
             }
-            format.parse(cleaned)?.time
-        } catch (_: Exception) {
-            null
         }
     }
 }

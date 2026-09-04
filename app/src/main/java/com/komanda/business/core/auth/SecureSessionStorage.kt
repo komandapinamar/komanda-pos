@@ -2,6 +2,7 @@ package com.komanda.business.core.auth
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.util.Log
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 
@@ -23,8 +24,9 @@ class SecureSessionStorage(
                 EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
                 EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             )
-        } catch (_: Throwable) {
+        } catch (t: Throwable) {
             // Fallback for JVM unit tests or test environments lacking Android KeyStore
+            Log.w("SecureSessionStorage", "KeyStore unavailable (${t.message}), falling back to standard private preferences.")
             context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
         }
     }

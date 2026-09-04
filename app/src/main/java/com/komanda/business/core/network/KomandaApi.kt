@@ -18,6 +18,11 @@ interface KomandaApi {
         @Body body: MobileLoginRequest
     ): Response<MobileLoginResponse>
 
+    @retrofit2.http.DELETE("/api/v1/auth/mobile/sessions")
+    suspend fun mobileRevokeSession(
+        @Header("Authorization") authHeader: String? = null
+    ): Response<Unit>
+
     @GET("/api/v1/auth/mobile/context")
     suspend fun getMobileContext(
         @Header("Authorization") authHeader: String? = null

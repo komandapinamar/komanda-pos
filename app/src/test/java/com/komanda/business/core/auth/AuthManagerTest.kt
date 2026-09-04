@@ -52,6 +52,8 @@ class FakeKomandaApi : KomandaApi {
 
     override suspend fun mobileLogin(body: MobileLoginRequest): Response<MobileLoginResponse> = loginResult
 
+    override suspend fun mobileRevokeSession(authHeader: String?): Response<Unit> = Response.success(Unit)
+
     override suspend fun getMobileContext(authHeader: String?): Response<MobileContextResponse> = contextResult
 
     override suspend fun listOrders(tenantId: String, status: String?, cursor: String?): Response<TenantOrdersListResponse> =
@@ -383,5 +385,49 @@ class AuthManagerTest {
 
         assertEquals(AuthState.LoggedOut, authManager.authState.value)
         assertNull(sessionStorage.storedSession)
+    }
+
+    @Test
+    fun `initialize with transient network IO error does not wipe saved credentials`() = runTest {
+        val fakeApi = object : KomandaApi by FakeKomandaApi() {
+            override suspend fun getMobileContext(authHeader: String?): Response<MobileContextResponse> {
+                throw java.io.IOException("Socket timeout / offline")
+            }
+        }
+        val sessionStorage = FakeSessionStorage().apply {
+            storedSession = AuthSession(
+                token = "persisted_token",
+                expiresAt = "2026-09-05T12:00:00Z",
+                tenantId = "ten_saved",
+                tenantName = "Saved",
+                locationId = "loc_saved",
+                locationName = "Loc"
+            )
+        }
+        val testTime = 1788400000000L
+        val authManager = AuthManager(fakeApi, sessionStorage, currentTimeProvider = { testTime })
+
+        authManager.initialize()
+
+        // Session must be preserved
+        assertNotNull(sessionStorage.storedSession)
+        assertEquals(0, sessionStorage.clearCount)
+        assertTrue(authManager.authState.value is AuthState.Error)
+    }
+
+    @Test
+    fun `selectTenant with expired session clears session and returns false`() = runTest {
+        val fakeApi = FakeKomandaApi()
+        val sessionStorage = FakeSessionStorage()
+        val testTime = 1788500000000L // 2026-09-03
+        val authManager = AuthManager(fakeApi, sessionStorage, currentTimeProvider = { testTime })
+
+        val availableTenants = listOf(
+            MobileTenantDto("ten_1", "Local 1", "local-1", "active", "admin")
+        )
+
+        val success = authManager.selectTenant("tok", "2026-09-01T12:00:00Z", "ten_1", availableTenants)
+        assertFalse(success)
+        assertEquals(AuthState.LoggedOut, authManager.authState.value)
     }
 }
