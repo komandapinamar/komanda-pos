@@ -253,7 +253,7 @@ fun LoginScreen(
                                         )
                                     )
                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        TextButton(onClick = { tempServerUrl = "http://127.0.0.1:3000" }) {
+                                        TextButton(onClick = { tempServerUrl = "https://throwing-dust-public.ngrok-free.dev" }) {
                                             Text("127.0.0.1 (USB)", fontSize = 11.sp, color = Amber400)
                                         }
                                         TextButton(onClick = { tempServerUrl = "http://10.0.2.2:3000" }) {

@@ -1,6 +1,7 @@
 package com.komanda.business.core.audio
 
 import android.content.Context
+import android.media.AudioAttributes
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
@@ -15,7 +16,13 @@ class OrderAnnouncer(
 ) : TextToSpeech.OnInitListener {
 
     private val tag = "OrderAnnouncer"
-    private var tts: TextToSpeech? = TextToSpeech(context.applicationContext, this)
+    private var tts: TextToSpeech? = TextToSpeech(
+        context.applicationContext,
+        this,
+        GOOGLE_TTS_ENGINE
+    )
+    private val pendingAnnouncements = ArrayDeque<String>()
+    private val lock = Any()
 
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
@@ -32,6 +39,12 @@ class OrderAnnouncer(
 
             tts?.setSpeechRate(0.95f) // Slightly slower for clarity in noisy restaurants
             tts?.setPitch(1.0f)
+            tts?.setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    .build()
+            )
 
             tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                 override fun onStart(utteranceId: String?) {
@@ -47,7 +60,11 @@ class OrderAnnouncer(
                 }
             })
 
-            _isInitialized.value = true
+            val queuedAnnouncements = synchronized(lock) {
+                _isInitialized.value = true
+                pendingAnnouncements.toList().also { pendingAnnouncements.clear() }
+            }
+            queuedAnnouncements.forEach(::speakNow)
             Log.i(tag, "TextToSpeech successfully initialized with Spanish locale.")
         } else {
             Log.e(tag, "Failed to initialize TextToSpeech engine. Status: $status")
@@ -58,33 +75,54 @@ class OrderAnnouncer(
      * Called when a kitchen/order operator marks an order as READY.
      * The Telpo audio routes through Bluetooth or 3.5mm jack to restaurant speakers.
      */
-    fun announceOrderReady(purchaseNumber: String) {
-        val message = "¡Pedido número $purchaseNumber listo para retirar!"
+    fun announceOrderReady(purchaseNumber: String, clientName: String? = null) {
+        val customer = clientName?.trim()?.takeIf { it.isNotBlank() }
+        val message = if (customer != null) {
+            "¡Pedido número $purchaseNumber, a nombre de $customer, acercate a retirar!"
+        } else {
+            "¡Pedido número $purchaseNumber listo para retirar!"
+        }
         speak(message)
     }
 
     /**
      * Called when order is delivered to the customer.
      */
-    fun announceOrderDelivered(purchaseNumber: String) {
-        val message = "Pedido número $purchaseNumber entregado. ¡Muchas gracias!"
+    fun announceOrderDelivered(purchaseNumber: String, clientName: String? = null) {
+        val customer = clientName?.trim()?.takeIf { it.isNotBlank() }
+        val message = if (customer != null) {
+            "Pedido número $purchaseNumber, a nombre de $customer, entregado. ¡Muchas gracias!"
+        } else {
+            "Pedido número $purchaseNumber entregado. ¡Muchas gracias!"
+        }
         speak(message)
     }
 
     fun speak(text: String) {
-        if (!_isInitialized.value) {
-            Log.w(tag, "TTS not ready yet, skipping announcement: $text")
-            return
+        synchronized(lock) {
+            if (!_isInitialized.value) {
+                pendingAnnouncements.addLast(text)
+                return
+            }
         }
 
+        speakNow(text)
+    }
+
+    private fun speakNow(text: String) {
         val utteranceId = UUID.randomUUID().toString()
         tts?.speak(text, TextToSpeech.QUEUE_ADD, null, utteranceId)
     }
 
     fun shutdown() {
+        synchronized(lock) {
+            pendingAnnouncements.clear()
+        }
         tts?.stop()
         tts?.shutdown()
         tts = null
         _isInitialized.value = false
     }
 }
+
+private const val GOOGLE_TTS_ENGINE = "com.google.android.tts"

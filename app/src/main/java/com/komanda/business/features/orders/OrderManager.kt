@@ -114,9 +114,9 @@ class OrderManager(
 
                     // Voice announcement on speaker
                     if (targetStatus == OrderStatuses.READY) {
-                        announcer.announceOrderReady(updated.purchaseNumber)
+                        announcer.announceOrderReady(updated.purchaseNumber, updated.customer.name)
                     } else if (targetStatus == OrderStatuses.DELIVERED) {
-                        announcer.announceOrderDelivered(updated.purchaseNumber)
+                        announcer.announceOrderDelivered(updated.purchaseNumber, updated.customer.name)
                     }
                 } else {
                     Log.e(tag, "Failed to transition order ${order.id}: ${response.code()}")
@@ -133,6 +133,10 @@ class OrderManager(
         val printer = printerManager ?: return
         val payload = order.toTicketPayload(tenantName = tenantName)
         printer.printReceipt(payload)
+    }
+
+    fun announceOrderReady(purchaseNumber: String, clientName: String? = null) {
+        announcer.announceOrderReady(purchaseNumber, clientName)
     }
 
     private fun currentIsoDate(): String {

@@ -11,6 +11,9 @@
 
     <queries>
         <package android:name="com.telpo.tps550.api" />
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE" />
+        </intent>
     </queries>
 
     <application

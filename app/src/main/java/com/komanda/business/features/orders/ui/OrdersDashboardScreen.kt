@@ -84,7 +84,6 @@ fun OrdersDashboardScreen(
             contentPadding = PaddingValues(horizontal = 24.dp, vertical = 28.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            // Header identical to Next.js page.tsx:
             // "OPERACIÓN" / "Pedidos en curso" / "Los cambios se reciben por eventos incrementales..."
             item {
                 Row(
@@ -94,11 +93,11 @@ fun OrdersDashboardScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (!tenantName.isNullOrBlank()) "OPERACIÓN — ${tenantName.uppercase()}" else "OPERACIÓN",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
-                            color = Amber400
+                            text = if (!tenantName.isNullOrBlank()) "Komanda Business - ${tenantName.uppercase()}" else "Komanda Business",
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Normal,
+                            letterSpacing = 0.5.sp,
+                            color = Color.White
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
@@ -252,9 +251,16 @@ fun OrdersDashboardScreen(
                                         onInvoice = {
                                             billingService?.let { bs ->
                                                 scope.launch {
+                                                    // todo: por que seria demo?
                                                     bs.invoiceOrder("demo", order)
                                                 }
                                             }
+                                        },
+                                        onCall = {
+                                            orderManager.announceOrderReady(
+                                                purchaseNumber = order.purchaseNumber,
+                                                clientName = order.customer.name
+                                            )
                                         }
                                     )
                                 }
@@ -312,7 +318,8 @@ fun AdminDashboardOrderCard(
     isTransitioning: Boolean,
     onTransition: () -> Unit,
     onPrint: () -> Unit,
-    onInvoice: () -> Unit
+    onInvoice: () -> Unit,
+    onCall: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -445,6 +452,15 @@ fun AdminDashboardOrderCard(
                             Icon(Icons.Default.Receipt, contentDescription = "AFIP", tint = Zinc300, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("AFIP", fontSize = 12.sp, color = Zinc300)
+                        }
+
+                        OutlinedButton(
+                            onClick = onCall,
+                            shape = RoundedCornerShape(2.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                        ) {
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("VOZ", fontSize = 12.sp, color = Zinc300)
                         }
                     }
                 }

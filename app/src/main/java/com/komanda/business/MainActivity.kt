@@ -43,6 +43,8 @@ enum class Screen {
     TAKE_ORDER
 }
 
+private const val DEFAULT_BASE_URL = "https://throwing-dust-public.ngrok-free.dev"
+
 class MainActivity : ComponentActivity() {
 
     private lateinit var announcer: OrderAnnouncer
@@ -54,7 +56,7 @@ class MainActivity : ComponentActivity() {
     private var activePosManager: PosManager? = null
     private var activeBillingService: BillingService? = null
 
-    private var currentBaseUrl by mutableStateOf("http://127.0.0.1:3000")
+    private var currentBaseUrl by mutableStateOf(DEFAULT_BASE_URL)
 
     private fun updateServerUrl(newUrl: String) {
         val trimmed = newUrl.trim().trimEnd('/')
@@ -84,7 +86,12 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         val prefs = getSharedPreferences("komanda_pos_prefs", MODE_PRIVATE)
-        currentBaseUrl = prefs.getString("server_base_url", "http://127.0.0.1:3000") ?: "http://127.0.0.1:3000"
+        val savedBaseUrl = prefs.getString("server_base_url", null)
+        currentBaseUrl = if (savedBaseUrl.isNullOrBlank() || savedBaseUrl == "http://127.0.0.1:3000") {
+            DEFAULT_BASE_URL
+        } else {
+            savedBaseUrl
+        }
 
         // 1. Audio Announcer (Native Android TextToSpeech offline for speaker)
         announcer = OrderAnnouncer(this)
