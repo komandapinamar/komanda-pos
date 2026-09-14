@@ -1,14 +1,17 @@
 package com.komanda.business.hardware.printing
 
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothSocket
+import android.bluetooth.BluetoothManager
+import android.content.Context
+import com.dantsu.escposprinter.connection.bluetooth.BluetoothConnection
 import com.komanda.business.core.model.TicketPayload
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.util.UUID
 
+/**
+ * Bluetooth ESC/POS printer driver powered by DantSu ESCPOS-ThermalPrinter-Android (BluetoothConnection).
+ */
 class BluetoothEscPosDriver(
+    private val context: Context,
     private val macAddress: String,
     private val deviceName: String = "Impresora Bluetooth"
 ) : PrinterDriver {
@@ -16,12 +19,11 @@ class BluetoothEscPosDriver(
     override val type: PrinterType = PrinterType.BLUETOOTH_ESC_POS
     override val name: String = "$deviceName ($macAddress)"
 
-    companion object {
-        private val SPP_UUID: UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB")
-    }
+    private val bluetoothManager: BluetoothManager?
+        get() = context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager
 
     override suspend fun isAvailable(): Boolean = withContext(Dispatchers.IO) {
-        val adapter = BluetoothAdapter.getDefaultAdapter() ?: return@withContext false
+        val adapter = bluetoothManager?.adapter ?: return@withContext false
         if (!adapter.isEnabled) return@withContext false
         try {
             val device = adapter.getRemoteDevice(macAddress)
@@ -37,21 +39,16 @@ class BluetoothEscPosDriver(
     }
 
     override suspend fun printRaw(bytes: ByteArray): PrintResult = withContext(Dispatchers.IO) {
-        val adapter = BluetoothAdapter.getDefaultAdapter()
+        val adapter = bluetoothManager?.adapter
             ?: return@withContext PrintResult.Error("NO_BLUETOOTH", "El dispositivo no posee adaptador Bluetooth.")
 
-        var socket: BluetoothSocket? = null
         try {
-            val device: BluetoothDevice = adapter.getRemoteDevice(macAddress)
-            adapter.cancelDiscovery()
-
-            socket = device.createRfcommSocketToServiceRecord(SPP_UUID)
-            socket.connect()
-
-            socket.outputStream.apply {
-                write(bytes)
-                flush()
-            }
+            val device = adapter.getRemoteDevice(macAddress)
+            val connection = BluetoothConnection(device)
+            connection.connect()
+            connection.write(bytes)
+            connection.send()
+            connection.disconnect()
             PrintResult.Success
         } catch (e: Exception) {
             PrintResult.Error(
@@ -59,10 +56,6 @@ class BluetoothEscPosDriver(
                 message = "Error imprimiendo por Bluetooth a $macAddress: ${e.message}",
                 cause = e
             )
-        } finally {
-            try {
-                socket?.close()
-            } catch (_: Exception) {}
         }
     }
 }

@@ -43,6 +43,7 @@ moshiKotlinCodegen = "1.15.2"
 datastorePreferences = "1.1.7"
 securityCrypto = "1.1.0-alpha06"
 material = "1.4.+"
+escposPrinter = "3.3.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -96,6 +97,7 @@ moshi-kotlin-codegen = { group = "com.squareup.moshi", name = "moshi-kotlin-code
 androidx-datastore-preferences = { group = "androidx.datastore", name = "datastore-preferences", version.ref = "datastorePreferences" }
 androidx-security-crypto = { group = "androidx.security", name = "security-crypto", version.ref = "securityCrypto" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
+escpos-thermalprinter = { module = "com.github.DantSu:ESCPOS-ThermalPrinter-Android", version.ref = "escposPrinter" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

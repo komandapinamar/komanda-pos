@@ -62,7 +62,7 @@ data class AdminDashboardOrder(
     val version: Int? = null
 ) {
     fun toTicketPayload(tenantName: String = "Komanda", copies: Int? = null): TicketPayload {
-        val resolvedCopies = copies ?: if (source == "admin-direct" || source == "admin_direct") 2 else 1
+        val resolvedCopies = copies ?: 1
         return TicketPayload(
             orderId = id,
             purchaseNumber = purchaseNumber,

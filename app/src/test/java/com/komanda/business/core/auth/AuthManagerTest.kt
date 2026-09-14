@@ -1,12 +1,18 @@
 package com.komanda.business.core.auth
 
+import com.komanda.business.core.network.BarcodeLookupResponseDto
+import com.komanda.business.core.network.CashShiftDto
+import com.komanda.business.core.network.CashShiftResponse
 import com.komanda.business.core.network.CatalogCategoryDto
 import com.komanda.business.core.network.CatalogItemDto
 import com.komanda.business.core.network.CatalogResponse
+import com.komanda.business.core.network.CloseCashShiftRequest
+import com.komanda.business.core.network.CreateCatalogItemRequest
 import com.komanda.business.core.network.CreateDirectOrderRequest
 import com.komanda.business.core.network.CreateInvoiceRequest
 import com.komanda.business.core.network.InvoiceResponse
 import com.komanda.business.core.network.KomandaApi
+import com.komanda.business.core.network.OpenCashShiftRequest
 import com.komanda.business.core.network.MobileLocationDto
 import com.komanda.business.core.network.MobileLoginRequest
 import com.komanda.business.core.network.MobileLoginResponse
@@ -83,12 +89,40 @@ class FakeKomandaApi : KomandaApi {
     override suspend fun listItems(tenantId: String): Response<CatalogResponse<CatalogItemDto>> =
         Response.success(CatalogResponse(emptyList()))
 
+    override suspend fun lookupBarcode(
+        tenantId: String,
+        barcode: String
+    ): Response<BarcodeLookupResponseDto> =
+        Response.success(BarcodeLookupResponseDto(source = "none"))
+
+    override suspend fun createCatalogItem(
+        tenantId: String,
+        body: CreateCatalogItemRequest
+    ): Response<CatalogItemDto> =
+        Response.error(500, "Unused".toResponseBody("application/json".toMediaType()))
+
     override suspend fun createInvoice(
         tenantId: String,
         orderId: String,
         body: CreateInvoiceRequest
     ): Response<InvoiceResponse> =
         Response.error(404, "Not found".toResponseBody("application/json".toMediaType()))
+
+    override suspend fun getCurrentCashShift(tenantId: String): Response<CashShiftResponse> =
+        Response.success(CashShiftResponse(null))
+
+    override suspend fun openCashShift(
+        tenantId: String,
+        body: OpenCashShiftRequest
+    ): Response<CashShiftDto> =
+        Response.error(500, "Unused".toResponseBody("application/json".toMediaType()))
+
+    override suspend fun closeCashShift(
+        tenantId: String,
+        shiftId: String,
+        body: CloseCashShiftRequest
+    ): Response<CashShiftDto> =
+        Response.error(500, "Unused".toResponseBody("application/json".toMediaType()))
 }
 
 class AuthManagerTest {

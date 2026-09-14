@@ -9,6 +9,7 @@ sealed class PrintResult {
 
 enum class PrinterType {
     TELPO_INTERNAL,
+    USB_ESC_POS,
     NETWORK_ESC_POS,
     BLUETOOTH_ESC_POS
 }

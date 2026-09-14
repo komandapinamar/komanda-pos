@@ -87,7 +87,7 @@ class AdminDashboardOrderTest {
         assertEquals(2, order.version)
 
         val ticketPayload = order.toTicketPayload("Komanda Pinamar")
-        assertEquals(2, ticketPayload.copies) // admin_direct gets 2 copies
+        assertEquals(1, ticketPayload.copies)
         assertEquals("Komanda Pinamar", ticketPayload.tenant)
         assertEquals("Gonzalo Perez", ticketPayload.customer.name)
         assertEquals(1, ticketPayload.items.size)

@@ -8,7 +8,8 @@ import com.komanda.business.core.network.ConnectionState
 import com.komanda.business.core.network.KomandaApi
 import com.komanda.business.core.network.SseOrderEventListener
 import com.komanda.business.core.network.TransitionOrderRequest
-import com.komanda.business.hardware.printing.PrinterManager
+import com.komanda.business.hardware.printing.PrinterConfig
+import com.komanda.business.hardware.printing.PrinterRouter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +26,7 @@ class OrderManager(
     private val api: KomandaApi,
     private val sseListener: SseOrderEventListener,
     private val announcer: OrderAnnouncer,
-    private val printerManager: PrinterManager? = null,
+    val printerRouter: PrinterRouter? = null,
     private val tenantName: String = "Komanda"
 ) {
 
@@ -42,6 +43,16 @@ class OrderManager(
     val transitioningOrderId: StateFlow<String?> = _transitioningOrderId.asStateFlow()
 
     val connectionState: StateFlow<ConnectionState> = sseListener.connectionState
+
+    val masterAutoPrintEnabled: StateFlow<Boolean> =
+        printerRouter?.masterAutoPrintEnabled ?: MutableStateFlow(true)
+
+    val configuredPrinters: StateFlow<List<PrinterConfig>> =
+        printerRouter?.printers ?: MutableStateFlow(emptyList())
+
+    // Track processed order IDs so existing orders on startup are not auto-printed
+    private val seenOrderIds = mutableSetOf<String>()
+    private var isFirstSync = true
 
     init {
         scope.launch {
@@ -61,6 +72,10 @@ class OrderManager(
         sseListener.stop()
     }
 
+    fun setMasterAutoPrint(enabled: Boolean) {
+        printerRouter?.setMasterAutoPrint(enabled)
+    }
+
     fun refreshOrders() {
         scope.launch {
             try {
@@ -69,6 +84,19 @@ class OrderManager(
                     val list = response.body()!!.data.map { it.toDashboardOrder() }
                     _orders.value = list.sortedByDescending { it.updatedAt }
                     _lastUpdatedAt.value = currentIsoDate()
+
+                    if (isFirstSync) {
+                        seenOrderIds.addAll(list.map { it.id })
+                        isFirstSync = false
+                    } else {
+                        // Check for new orders that arrived during refresh
+                        for (order in list) {
+                            if (order.id !in seenOrderIds) {
+                                seenOrderIds.add(order.id)
+                                onNewOrderArrived(order)
+                            }
+                        }
+                    }
                 } else {
                     Log.e(tag, "Failed to load orders: ${response.code()}")
                 }
@@ -86,9 +114,24 @@ class OrderManager(
                 val rest = _orders.value.filter { it.id != dashboardOrder.id }
                 _orders.value = (listOf(dashboardOrder) + rest).sortedByDescending { it.updatedAt }
                 _lastUpdatedAt.value = currentIsoDate()
+
+                val isNew = orderId !in seenOrderIds
+                if (isNew) {
+                    seenOrderIds.add(orderId)
+                    onNewOrderArrived(dashboardOrder)
+                }
             }
         } catch (e: Exception) {
             Log.e(tag, "Failed to refresh order $orderId", e)
+        }
+    }
+
+    private fun onNewOrderArrived(order: AdminDashboardOrder) {
+        printerRouter?.let { router ->
+            scope.launch {
+                val payload = order.toTicketPayload(tenantName = tenantName)
+                router.handleNewOrder(payload)
+            }
         }
     }
 
@@ -129,10 +172,10 @@ class OrderManager(
         }
     }
 
-    suspend fun printOrderTicket(order: AdminDashboardOrder) {
-        val printer = printerManager ?: return
+    suspend fun printOrderTicket(order: AdminDashboardOrder, targetPrinterId: String? = null) {
+        val router = printerRouter ?: return
         val payload = order.toTicketPayload(tenantName = tenantName)
-        printer.printReceipt(payload)
+        router.printManual(payload, targetPrinterId = targetPrinterId)
     }
 
     fun announceOrderReady(purchaseNumber: String, clientName: String? = null) {
