@@ -1,6 +1,14 @@
 package com.komanda.business
 
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
+import android.hardware.usb.UsbDevice
+import android.hardware.usb.UsbManager
+import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -31,8 +39,11 @@ import com.komanda.business.features.orders.OrderManager
 import com.komanda.business.features.orders.ui.OrdersDashboardScreen
 import com.komanda.business.features.pos.PosManager
 import com.komanda.business.features.pos.ui.PosScreen
-import com.komanda.business.hardware.printing.PrinterManager
+import com.komanda.business.features.settings.ui.PrinterSettingsScreen
+import com.komanda.business.hardware.printing.PrinterDriver
+import com.komanda.business.hardware.printing.PrinterRouter
 import com.komanda.business.hardware.printing.TelpoPrinterDriver
+import com.komanda.business.hardware.printing.UsbEscPosDriver
 import com.komanda.business.ui.theme.Amber400
 import com.komanda.business.ui.theme.KomandaTheme
 import com.komanda.business.ui.theme.Zinc950
@@ -40,7 +51,8 @@ import kotlinx.coroutines.launch
 
 enum class Screen {
     ORDERS_DASHBOARD,
-    TAKE_ORDER
+    TAKE_ORDER,
+    PRINTER_SETTINGS
 }
 
 private const val DEFAULT_BASE_URL = "https://throwing-dust-public.ngrok-free.dev"
@@ -48,9 +60,25 @@ private const val DEFAULT_BASE_URL = "https://throwing-dust-public.ngrok-free.de
 class MainActivity : ComponentActivity() {
 
     private lateinit var announcer: OrderAnnouncer
-    private lateinit var printerManager: PrinterManager
+    private lateinit var printerRouter: PrinterRouter
+    private lateinit var usbDriver: UsbEscPosDriver
     private lateinit var authManager: AuthManager
     private lateinit var api: KomandaApi
+
+    private val usbReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (UsbEscPosDriver.ACTION_USB_PERMISSION == intent?.action) {
+                val granted = intent.getBooleanExtra(UsbManager.EXTRA_PERMISSION_GRANTED, false)
+                val device = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    intent.getParcelableExtra(UsbManager.EXTRA_DEVICE, UsbDevice::class.java)
+                } else {
+                    @Suppress("DEPRECATION")
+                    intent.getParcelableExtra(UsbManager.EXTRA_DEVICE)
+                }
+                Log.i("MainActivity", "USB permission broadcast received for ${device?.productName ?: device?.deviceName}: granted=$granted")
+            }
+        }
+    }
 
     private var activeOrderManager: OrderManager? = null
     private var activePosManager: PosManager? = null
@@ -93,14 +121,22 @@ class MainActivity : ComponentActivity() {
             savedBaseUrl
         }
 
+        // Register USB permission broadcast receiver
+        val filter = IntentFilter(UsbEscPosDriver.ACTION_USB_PERMISSION)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(usbReceiver, filter, RECEIVER_NOT_EXPORTED)
+        } else {
+            registerReceiver(usbReceiver, filter)
+        }
+
         // 1. Audio Announcer (Native Android TextToSpeech offline for speaker)
         announcer = OrderAnnouncer(this)
 
-        // 2. Printing Subsystem (Telpo Thermal Printer Driver)
-        val telpoDriver = TelpoPrinterDriver(this)
-        printerManager = PrinterManager(
-            defaultDriver = telpoDriver
-        )
+        // 2. Printing Subsystem (Multi-printer router with DantSu engine)
+        printerRouter = PrinterRouter(this)
+        usbDriver = UsbEscPosDriver(this)
+        // Request USB permission on startup if a USB printer is connected
+        usbDriver.requestPermission()
 
         // 3. Network API configured with dynamic bearer token provider
         api = NetworkClient.create(
@@ -208,7 +244,7 @@ class MainActivity : ComponentActivity() {
                                 api = api,
                                 sseListener = sseListener,
                                 announcer = announcer,
-                                printerManager = printerManager
+                                printerRouter = printerRouter
                             ).also {
                                 activeOrderManager?.stopListening()
                                 activeOrderManager = it
@@ -220,14 +256,14 @@ class MainActivity : ComponentActivity() {
                             PosManager(
                                 tenantId = session.tenantId,
                                 api = api,
-                                printerManager = printerManager
+                                printerRouter = printerRouter
                             ).also { activePosManager = it }
                         }
 
                         val billingSvc = remember(session.tenantId) {
                             BillingService(
                                 api = api,
-                                printerManager = printerManager
+                                printerRouter = printerRouter
                             ).also { activeBillingService = it }
                         }
 
@@ -238,6 +274,7 @@ class MainActivity : ComponentActivity() {
                                     billingService = billingSvc,
                                     tenantName = session.tenantName.ifBlank { null },
                                     onNavigateToPos = { currentScreen = Screen.TAKE_ORDER },
+                                    onNavigateToPrinterSettings = { currentScreen = Screen.PRINTER_SETTINGS },
                                     onLogout = {
                                         lifecycleScope.launch {
                                             authManager.logout()
@@ -255,6 +292,12 @@ class MainActivity : ComponentActivity() {
                                     onBack = { currentScreen = Screen.ORDERS_DASHBOARD }
                                 )
                             }
+                            Screen.PRINTER_SETTINGS -> {
+                                PrinterSettingsScreen(
+                                    router = printerRouter,
+                                    onBack = { currentScreen = Screen.ORDERS_DASHBOARD }
+                                )
+                            }
                         }
                     }
                 }
@@ -266,5 +309,8 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
         announcer.shutdown()
         activeOrderManager?.stopListening()
+        try {
+            unregisterReceiver(usbReceiver)
+        } catch (_: Exception) {}
     }
 }

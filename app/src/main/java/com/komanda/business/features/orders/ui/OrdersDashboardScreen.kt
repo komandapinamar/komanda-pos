@@ -22,6 +22,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -31,11 +33,17 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -43,10 +51,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.komanda.business.core.model.AdminDashboardOrder
 import com.komanda.business.core.network.ConnectionState
 import com.komanda.business.features.billing.BillingService
 import com.komanda.business.features.orders.OrderManager
+import com.komanda.business.hardware.printing.PrinterConfig
+import com.komanda.business.hardware.printing.PrinterRole
 import com.komanda.business.ui.theme.Amber400
 import com.komanda.business.ui.theme.Amber600
 import com.komanda.business.ui.theme.Emerald600
@@ -65,6 +76,7 @@ fun OrdersDashboardScreen(
     orderManager: OrderManager,
     billingService: BillingService? = null,
     onNavigateToPos: () -> Unit,
+    onNavigateToPrinterSettings: (() -> Unit)? = null,
     tenantName: String? = null,
     onLogout: (() -> Unit)? = null
 ) {
@@ -73,6 +85,9 @@ fun OrdersDashboardScreen(
     val lastUpdatedAt by orderManager.lastUpdatedAt.collectAsState()
     val transitioningOrderId by orderManager.transitioningOrderId.collectAsState()
     val scope = rememberCoroutineScope()
+    var orderToPrint by remember { mutableStateOf<AdminDashboardOrder?>(null) }
+    val masterAutoPrint by orderManager.masterAutoPrintEnabled.collectAsState()
+    val configuredPrinters by orderManager.configuredPrinters.collectAsState()
 
     Scaffold(
         containerColor = Zinc950
@@ -118,6 +133,39 @@ fun OrdersDashboardScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
+                        // Master Auto-Print Switch
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .background(Zinc900, RoundedCornerShape(2.dp))
+                                .border(1.dp, Zinc800, RoundedCornerShape(2.dp))
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Impresión Automática",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = if (masterAutoPrint) Amber400 else Zinc400
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Switch(
+                                checked = masterAutoPrint,
+                                onCheckedChange = { orderManager.setMasterAutoPrint(it) },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Zinc950,
+                                    checkedTrackColor = Amber400,
+                                    uncheckedThumbColor = Zinc400,
+                                    uncheckedTrackColor = Zinc800
+                                )
+                            )
+                        }
+
+                        if (onNavigateToPrinterSettings != null) {
+                            IconButton(onClick = onNavigateToPrinterSettings) {
+                                Icon(Icons.Default.Settings, contentDescription = "Configurar Impresoras", tint = Zinc400)
+                            }
+                        }
+
                         IconButton(
                             onClick = { orderManager.refreshOrders() }
                         ) {
@@ -244,9 +292,7 @@ fun OrdersDashboardScreen(
                                         isTransitioning = transitioningOrderId == order.id,
                                         onTransition = { orderManager.transitionOrder(order) },
                                         onPrint = {
-                                            scope.launch {
-                                                orderManager.printOrderTicket(order)
-                                            }
+                                            orderToPrint = order
                                         },
                                         onInvoice = {
                                             billingService?.let { bs ->
@@ -269,6 +315,20 @@ fun OrdersDashboardScreen(
                     }
                 }
             }
+        }
+
+        orderToPrint?.let { order ->
+            PrintTargetDialog(
+                order = order,
+                printers = configuredPrinters,
+                onDismiss = { orderToPrint = null },
+                onSelectPrinter = { targetId ->
+                    scope.launch {
+                        orderManager.printOrderTicket(order, targetPrinterId = targetId)
+                    }
+                    orderToPrint = null
+                }
+            )
         }
     }
 }
@@ -578,6 +638,86 @@ fun AdminDashboardOrderCard(
             }
         }
     }
+}
+
+@Composable
+private fun PrintTargetDialog(
+    order: AdminDashboardOrder,
+    printers: List<PrinterConfig>,
+    onDismiss: () -> Unit,
+    onSelectPrinter: (targetPrinterId: String?) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Imprimir Comanda — Compra #${order.purchaseNumber}",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Seleccioná la impresora de destino:",
+                    fontSize = 13.sp,
+                    color = Zinc400
+                )
+
+                val activePrinters = printers.filter { it.role != PrinterRole.DISABLED }
+                if (activePrinters.isEmpty()) {
+                    Text(
+                        text = "No hay impresoras activas configuradas.",
+                        fontSize = 13.sp,
+                        color = Red400
+                    )
+                } else {
+                    activePrinters.forEach { p ->
+                        val roleLabel = when (p.role) {
+                            PrinterRole.KITCHEN -> "Cocina"
+                            PrinterRole.COUNTER -> "Mostrador"
+                            PrinterRole.DISABLED -> "Desactivada"
+                        }
+                        OutlinedButton(
+                            onClick = { onSelectPrinter(p.id) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(2.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(p.name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                                Text("[$roleLabel]", fontSize = 12.sp, color = Amber400)
+                            }
+                        }
+                    }
+
+                    if (activePrinters.size > 1) {
+                        Button(
+                            onClick = { onSelectPrinter("ALL") },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(2.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Amber400, contentColor = Zinc950)
+                        ) {
+                            Text("Todas las impresoras activas", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancelar", color = Zinc400)
+            }
+        },
+        containerColor = Zinc900
+    )
 }
 
 private data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)

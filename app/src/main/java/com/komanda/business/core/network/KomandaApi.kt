@@ -68,10 +68,43 @@ interface KomandaApi {
         @Path("tenantId") tenantId: String
     ): Response<CatalogResponse<CatalogItemDto>>
 
+    @GET("/api/v1/tenants/{tenantId}/catalog/lookup")
+    suspend fun lookupBarcode(
+        @Path("tenantId") tenantId: String,
+        @Query("barcode") barcode: String
+    ): Response<BarcodeLookupResponseDto>
+
+    @Headers("Content-Type: application/json")
+    @POST("/api/v1/tenants/{tenantId}/catalog/items")
+    suspend fun createCatalogItem(
+        @Path("tenantId") tenantId: String,
+        @Body body: CreateCatalogItemRequest
+    ): Response<CatalogItemDto>
+
     @POST("/api/v1/tenants/{tenantId}/orders/{orderId}/invoice")
     suspend fun createInvoice(
         @Path("tenantId") tenantId: String,
         @Path("orderId") orderId: String,
         @Body body: CreateInvoiceRequest
     ): Response<InvoiceResponse>
+
+    @GET("/api/v1/tenants/{tenantId}/cash-shifts/current")
+    suspend fun getCurrentCashShift(
+        @Path("tenantId") tenantId: String
+    ): Response<CashShiftResponse>
+
+    @Headers("Content-Type: application/json")
+    @POST("/api/v1/tenants/{tenantId}/cash-shifts/open")
+    suspend fun openCashShift(
+        @Path("tenantId") tenantId: String,
+        @Body body: OpenCashShiftRequest
+    ): Response<CashShiftDto>
+
+    @Headers("Content-Type: application/json")
+    @POST("/api/v1/tenants/{tenantId}/cash-shifts/{shiftId}/close")
+    suspend fun closeCashShift(
+        @Path("tenantId") tenantId: String,
+        @Path("shiftId") shiftId: String,
+        @Body body: CloseCashShiftRequest
+    ): Response<CashShiftDto>
 }

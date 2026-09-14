@@ -12,7 +12,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.komanda.business"
+        applicationId = "com.komanda.pos"
         minSdk = 24
         targetSdk = 37
         versionCode = 1
@@ -80,6 +80,7 @@ dependencies {
     implementation(libs.okhttp.sse)
     implementation(libs.play.services.location)
     implementation(libs.retrofit)
+    implementation(libs.escpos.thermalprinter)
     testImplementation(libs.androidx.core)
     testImplementation(libs.androidx.junit)
     testImplementation(libs.junit)

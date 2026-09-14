@@ -5,7 +5,8 @@ import com.komanda.business.core.model.FiscalInvoiceData
 import com.komanda.business.core.network.CreateInvoiceRequest
 import com.komanda.business.core.network.KomandaApi
 import com.komanda.business.hardware.printing.PrintResult
-import com.komanda.business.hardware.printing.PrinterManager
+import com.komanda.business.hardware.printing.PrinterRole
+import com.komanda.business.hardware.printing.PrinterRouter
 
 sealed class BillingResult {
     data class Success(val fiscalData: FiscalInvoiceData, val printResult: PrintResult) : BillingResult()
@@ -14,7 +15,7 @@ sealed class BillingResult {
 
 class BillingService(
     private val api: KomandaApi,
-    private val printerManager: PrinterManager,
+    private val printerRouter: PrinterRouter,
     private val tenantName: String = "Komanda"
 ) {
 
@@ -58,7 +59,11 @@ class BillingService(
                 fiscalInfo = fiscalData
             )
 
-            val printResult = printerManager.printReceipt(ticketPayload)
+            // Invoices are printed on the counter printer (or first available active printer)
+            val counterPrinters = printerRouter.printers.value.filter { it.role == PrinterRole.COUNTER }
+            val targetId = counterPrinters.firstOrNull()?.id
+            val results = printerRouter.printManual(ticketPayload, targetPrinterId = targetId)
+            val printResult = results.values.firstOrNull() ?: PrintResult.Success
 
             BillingResult.Success(
                 fiscalData = fiscalData,

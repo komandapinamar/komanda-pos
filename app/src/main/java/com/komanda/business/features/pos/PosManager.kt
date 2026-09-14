@@ -8,7 +8,7 @@ import com.komanda.business.core.network.CreateDirectOrderRequest
 import com.komanda.business.core.network.DirectOrderCustomerRequest
 import com.komanda.business.core.network.DirectOrderItemRequest
 import com.komanda.business.core.network.KomandaApi
-import com.komanda.business.hardware.printing.PrinterManager
+import com.komanda.business.hardware.printing.PrinterRouter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +22,7 @@ sealed class DirectOrderResult {
 class PosManager(
     private val tenantId: String,
     private val api: KomandaApi,
-    private val printerManager: PrinterManager? = null,
+    private val printerRouter: PrinterRouter? = null,
     private val tenantName: String = "Komanda"
 ) {
 
@@ -131,11 +131,11 @@ class PosManager(
 
             val order = response.body()!!.toDashboardOrder()
 
-            // Automatic print of direct order (2 copies: COCINA + CAJA / ENTREGA)
-            printerManager?.let { pm ->
+            // Dispatches automatic printing according to configured printer triggers
+            printerRouter?.let { router ->
                 try {
-                    val ticketPayload = order.toTicketPayload(tenantName = tenantName, copies = 2)
-                    pm.printReceipt(ticketPayload)
+                    val ticketPayload = order.toTicketPayload(tenantName = tenantName)
+                    router.handleDirectPosOrder(ticketPayload)
                 } catch (e: Exception) {
                     Log.e(tag, "Print error after creating direct order", e)
                 }

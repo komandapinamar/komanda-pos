@@ -91,9 +91,8 @@ fun LoginScreen(
                 Text(
                     text = "Komanda Business",
                     style = MaterialTheme.typography.headlineMedium.copy(
-                        fontFamily = FontFamily.Default,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.5.sp
+                        fontWeight = FontWeight.Thin,
+                        letterSpacing = 1.sp
                     ),
                     color = Color.White
                 )

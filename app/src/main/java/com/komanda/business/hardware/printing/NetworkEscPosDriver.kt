@@ -1,11 +1,13 @@
 package com.komanda.business.hardware.printing
 
+import com.dantsu.escposprinter.connection.tcp.TcpConnection
 import com.komanda.business.core.model.TicketPayload
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.net.InetSocketAddress
-import java.net.Socket
 
+/**
+ * Network ESC/POS printer driver powered by DantSu ESCPOS-ThermalPrinter-Android (TcpConnection).
+ */
 class NetworkEscPosDriver(
     private val host: String,
     private val port: Int = 9100,
@@ -16,11 +18,11 @@ class NetworkEscPosDriver(
     override val name: String = "Impresora de Red ($host:$port)"
 
     override suspend fun isAvailable(): Boolean = withContext(Dispatchers.IO) {
+        val connection = TcpConnection(host, port, timeoutMs)
         try {
-            Socket().use { socket ->
-                socket.connect(InetSocketAddress(host, port), timeoutMs)
-                true
-            }
+            connection.connect()
+            connection.disconnect()
+            true
         } catch (_: Exception) {
             false
         }
@@ -32,14 +34,11 @@ class NetworkEscPosDriver(
     }
 
     override suspend fun printRaw(bytes: ByteArray): PrintResult = withContext(Dispatchers.IO) {
+        val connection = TcpConnection(host, port, timeoutMs)
         try {
-            Socket().use { socket ->
-                socket.connect(InetSocketAddress(host, port), timeoutMs)
-                socket.getOutputStream().apply {
-                    write(bytes)
-                    flush()
-                }
-            }
+            connection.connect()
+            connection.write(bytes)
+            connection.send()
             PrintResult.Success
         } catch (e: Exception) {
             PrintResult.Error(
@@ -47,6 +46,10 @@ class NetworkEscPosDriver(
                 message = "Fallo al enviar datos a $host:$port: ${e.message}",
                 cause = e
             )
+        } finally {
+            try {
+                connection.disconnect()
+            } catch (_: Exception) {}
         }
     }
 }

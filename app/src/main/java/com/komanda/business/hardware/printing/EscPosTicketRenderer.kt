@@ -12,8 +12,8 @@ import java.util.Locale
 import java.util.TimeZone
 
 /**
- * Port of komanda/print-service/komanda_print/renderer.py to Kotlin.
  * Generates raw ESC/POS byte streams for thermal printers (32 columns, 58mm/80mm).
+ * Produces differentiated ticket layouts for Kitchen (operational) and Counter (commercial).
  */
 object EscPosTicketRenderer {
 
@@ -31,38 +31,107 @@ object EscPosTicketRenderer {
     private val CMD_SIZE_DOUBLE = byteArrayOf(0x1D, 0x21, 0x11) // GS ! 0x11 (double width & height)
     private val CMD_FEED_AND_CUT = byteArrayOf(0x1D, 0x56, 0x42, 0x02) // GS V 'B' 2
 
-    fun renderTicket(payload: TicketPayload): ByteArray {
+    /**
+     * Renders a ticket tailored to the specified printer role.
+     */
+    fun renderTicket(payload: TicketPayload, role: PrinterRole = PrinterRole.COUNTER): ByteArray {
         val stream = ByteArrayOutputStream()
         val copies = if (payload.copies > 0) payload.copies else 1
 
         for (copyIndex in 0 until copies) {
-            renderSingleTicketCopy(stream, payload, copyIndex, copies)
+            when (role) {
+                PrinterRole.KITCHEN -> renderKitchenCopy(stream, payload)
+                PrinterRole.COUNTER, PrinterRole.DISABLED -> renderCounterCopy(stream, payload, copyIndex, copies)
+            }
         }
 
         return stream.toByteArray()
     }
 
-    private fun renderSingleTicketCopy(
-        stream: ByteArrayOutputStream,
-        payload: TicketPayload,
-        copyIndex: Int,
-        totalCopies: Int
-    ) {
-        // Initialize printer
-        stream.write(CMD_INIT)
+    /**
+     * Kitchen Ticket Template:
+     * Focuses 100% on preparation. Strictly omits prices, totals, and database internal UUIDs.
+     */
+    fun renderKitchenTicket(payload: TicketPayload): ByteArray {
+        val stream = ByteArrayOutputStream()
+        renderKitchenCopy(stream, payload)
+        return stream.toByteArray()
+    }
 
-        // Header
+    /**
+     * Counter / Customer Ticket Template:
+     * Full commercial receipt with itemized prices, totals, payment status, optional fiscal block,
+     * and a friendly ASCII art emblem with thank-you branding.
+     */
+    fun renderCounterTicket(payload: TicketPayload): ByteArray {
+        val stream = ByteArrayOutputStream()
+        val copies = if (payload.copies > 0) payload.copies else 1
+        for (i in 0 until copies) {
+            renderCounterCopy(stream, payload, i, copies)
+        }
+        return stream.toByteArray()
+    }
+
+    /**
+     * Komanda Espresso Cash Ticket Template:
+     * High-visibility receipt for self-service totems featuring the prominent notice:
+     * "*** ATENCION *** ACERCARSE A CAJA A REALIZAR EL PAGO EN EFECTIVO"
+     */
+    fun renderEspressoCashTicket(payload: TicketPayload): ByteArray {
+        val stream = ByteArrayOutputStream()
+        renderSharedHeader(stream, payload, subtitle = "AUTOSERVICIO EXPRESS")
+
+        writeRule(stream)
+        stream.write(CMD_ALIGN_LEFT)
+        stream.write(CMD_BOLD_ON)
+        writeText(stream, "PRODUCTOS\n")
+        stream.write(CMD_BOLD_OFF)
+
+        for (item in payload.items) {
+            writeWrapped(stream, "${item.quantity} x ${item.name}")
+            writeText(stream, "    ${formatMoney(item.lineTotal, payload.currency)}\n")
+        }
+
+        writeRule(stream)
+        stream.write(CMD_BOLD_ON)
+        writeText(stream, "TOTAL A PAGAR: ${formatMoney(payload.summary.total, payload.currency)}\n")
+        stream.write(CMD_BOLD_OFF)
+        writeRule(stream)
+
         stream.write(CMD_ALIGN_CENTER)
         stream.write(CMD_SIZE_DOUBLE)
         stream.write(CMD_BOLD_ON)
-        writeText(stream, "${payload.tenant.uppercase()}\n")
+        writeText(stream, "*** ATENCION ***\n")
+        writeText(stream, "ACERCARSE A CAJA\n")
+        writeText(stream, "A REALIZAR EL PAGO\n")
+        writeText(stream, "EN EFECTIVO\n")
+        stream.write(CMD_BOLD_OFF)
+        stream.write(CMD_SIZE_NORMAL)
+        writeRule(stream)
 
+        writeText(stream, "\n\n\n")
+        stream.write(CMD_FEED_AND_CUT)
+
+        return stream.toByteArray()
+    }
+
+    private fun renderSharedHeader(stream: ByteArrayOutputStream, payload: TicketPayload, subtitle: String? = null) {
+        stream.write(CMD_INIT)
+        stream.write(CMD_ALIGN_CENTER)
+
+        // 1. Primary Title: KOMANDA
+        stream.write(CMD_SIZE_DOUBLE)
+        stream.write(CMD_BOLD_ON)
+        writeText(stream, "KOMANDA\n")
+
+        // 2. Subtitle: Restaurant Name
         stream.write(CMD_SIZE_NORMAL)
         stream.write(CMD_BOLD_ON)
-        writeText(stream, "${getCopyLabel(payload.source, copyIndex, totalCopies)}\n")
+        writeText(stream, "${payload.tenant.uppercase()}\n")
 
-        stream.write(CMD_BOLD_OFF)
-        writeText(stream, "${getStatusLabel(payload.source)}\n")
+        subtitle?.let {
+            writeText(stream, "$it\n")
+        }
 
         val purchaseNumber = payload.purchaseNumber
         if (!purchaseNumber.isNullOrBlank()) {
@@ -71,8 +140,13 @@ object EscPosTicketRenderer {
             writeText(stream, "Orden #${payload.orderId}\n")
         }
 
+        stream.write(CMD_BOLD_OFF)
         writeText(stream, "${formatTimestamp(payload.approvedAt)}\n")
         writeRule(stream)
+    }
+
+    private fun renderKitchenCopy(stream: ByteArrayOutputStream, payload: TicketPayload) {
+        renderSharedHeader(stream, payload, subtitle = "--- COCINA ---")
 
         // Customer Info
         stream.write(CMD_ALIGN_LEFT)
@@ -81,19 +155,15 @@ object EscPosTicketRenderer {
         stream.write(CMD_BOLD_OFF)
         writeWrapped(stream, payload.customer.name?.ifBlank { "Sin nombre" } ?: "Sin nombre")
 
-        payload.customer.phone?.let { phone ->
-            if (phone.isNotBlank()) {
-                writeWrapped(stream, "Telefono: $phone")
-            }
+        payload.customer.phone?.takeIf { it.isNotBlank() }?.let { phone ->
+            writeWrapped(stream, "Telefono: $phone")
         }
 
-        payload.customer.address?.let { address ->
-            if (address.isNotBlank()) {
-                writeWrapped(stream, "Direccion: $address")
-            }
+        payload.customer.address?.takeIf { it.isNotBlank() }?.let { address ->
+            writeWrapped(stream, "Direccion: $address")
         }
 
-        // Notes / Observations
+        // Notes / Observations (emphasized for kitchen staff)
         if (!payload.notes.isNullOrBlank()) {
             writeRule(stream)
             stream.write(CMD_BOLD_ON)
@@ -102,7 +172,7 @@ object EscPosTicketRenderer {
             writeWrapped(stream, payload.notes.trim())
         }
 
-        // Order Lines
+        // Order Lines (Items and options, NO PRICES)
         writeRule(stream)
         stream.write(CMD_BOLD_ON)
         writeText(stream, "PEDIDO\n")
@@ -118,35 +188,110 @@ object EscPosTicketRenderer {
             for (option in item.options) {
                 writeWrapped(stream, "+ ${option.name}", indent = "  ")
             }
+        }
+
+        // Summary: Physical units only
+        writeRule(stream)
+        writeText(stream, "Lineas: ${payload.items.size}\n")
+        writeText(stream, "Total unidades: $totalUnits\n")
+
+        // Feed & Cut
+        writeText(stream, "\n\n\n")
+        stream.write(CMD_FEED_AND_CUT)
+    }
+
+    private fun renderCounterCopy(
+        stream: ByteArrayOutputStream,
+        payload: TicketPayload,
+        copyIndex: Int,
+        totalCopies: Int
+    ) {
+        val copyLabel = if (totalCopies > 1) "COPIA ${copyIndex + 1}/$totalCopies" else null
+        renderSharedHeader(stream, payload, subtitle = copyLabel)
+
+        // Customer Info
+        stream.write(CMD_ALIGN_LEFT)
+        stream.write(CMD_BOLD_ON)
+        writeText(stream, "CLIENTE\n")
+        stream.write(CMD_BOLD_OFF)
+        writeWrapped(stream, payload.customer.name?.ifBlank { "Sin nombre" } ?: "Sin nombre")
+
+        payload.customer.phone?.takeIf { it.isNotBlank() }?.let { phone ->
+            writeWrapped(stream, "Telefono: $phone")
+        }
+
+        payload.customer.address?.takeIf { it.isNotBlank() }?.let { address ->
+            writeWrapped(stream, "Direccion: $address")
+        }
+
+        // Notes / Observations
+        if (!payload.notes.isNullOrBlank()) {
+            writeRule(stream)
+            stream.write(CMD_BOLD_ON)
+            writeText(stream, "OBSERVACIONES\n")
+            stream.write(CMD_BOLD_OFF)
+            writeWrapped(stream, payload.notes.trim())
+        }
+
+        // Order Lines with Prices
+        writeRule(stream)
+        stream.write(CMD_BOLD_ON)
+        writeText(stream, "PEDIDO\n")
+        stream.write(CMD_BOLD_OFF)
+
+        var totalUnits = 0
+        for (item in payload.items) {
+            totalUnits += item.quantity
+            stream.write(CMD_BOLD_ON)
+            writeWrapped(stream, "${item.quantity} x ${item.name}")
+            stream.write(CMD_BOLD_OFF)
+
+            for (option in item.options) {
+                val deltaStr = if (option.priceDelta > 0) " (+${formatMoney(option.priceDelta, payload.currency)})" else ""
+                writeWrapped(stream, "+ ${option.name}$deltaStr", indent = "  ")
+            }
             writeText(stream, "    ${formatMoney(item.lineTotal, payload.currency)}\n")
         }
 
-        // Summary
+        // Financial Summary
         writeRule(stream)
         writeText(stream, "Lineas: ${payload.items.size}\n")
         writeText(stream, "Unidades: $totalUnits\n")
 
         if (payload.summary.discountTotal > 0) {
             writeText(stream, "Subtotal: ${formatMoney(payload.summary.subtotal, payload.currency)}\n")
-            writeText(stream, "Descuento: ${formatMoney(payload.summary.discountTotal, payload.currency)}\n")
+            writeText(stream, "Descuento: -${formatMoney(payload.summary.discountTotal, payload.currency)}\n")
         }
 
         stream.write(CMD_BOLD_ON)
         writeText(stream, "Total: ${formatMoney(payload.summary.total, payload.currency)}\n")
         stream.write(CMD_BOLD_OFF)
+        writeText(stream, "Estado: ${getStatusLabel(payload.source)}\n")
         writeRule(stream)
-
-        // Internal order ID
-        writeText(stream, "Orden interna: ${payload.orderId}\n")
 
         // AFIP Fiscal QR / Data if present
         payload.fiscalInfo?.let { fiscal ->
             renderFiscalBlock(stream, fiscal)
         }
 
+        // Footer: ASCII Art & Thank You Branding
+        renderCounterFooter(stream)
+
         // Feed & Cut
         writeText(stream, "\n\n\n")
         stream.write(CMD_FEED_AND_CUT)
+    }
+
+    private fun renderCounterFooter(stream: ByteArrayOutputStream) {
+        stream.write(CMD_ALIGN_CENTER)
+        writeText(stream, "   ( (\n")
+        writeText(stream, "    ) )\n")
+        writeText(stream, " .------.\n")
+        writeText(stream, " | ~~~~ |\n")
+        writeText(stream, "  '----'\n")
+        stream.write(CMD_BOLD_ON)
+        writeText(stream, "¡Gracias por tu compra!\n")
+        stream.write(CMD_BOLD_OFF)
     }
 
     private fun renderFiscalBlock(stream: ByteArrayOutputStream, fiscal: FiscalInvoiceData) {
@@ -162,6 +307,7 @@ object EscPosTicketRenderer {
         fiscal.qrData?.let { qr ->
             writeQrCode(stream, qr)
         }
+        writeRule(stream)
     }
 
     private fun writeQrCode(stream: ByteArrayOutputStream, qrData: String) {
@@ -218,13 +364,6 @@ object EscPosTicketRenderer {
         } catch (_: Exception) {
             outFormat.format(Date())
         }
-    }
-
-    fun getCopyLabel(source: String, copyIndex: Int, totalCopies: Int): String {
-        if (source == "admin_direct" || source == "admin-direct") {
-            return if (copyIndex == 0) "COCINA" else "CAJA / ENTREGA"
-        }
-        return if (totalCopies > 1) "COPIA ${copyIndex + 1}/$totalCopies" else "COCINA"
     }
 
     fun getStatusLabel(source: String): String {

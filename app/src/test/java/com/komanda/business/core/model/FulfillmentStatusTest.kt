@@ -40,7 +40,7 @@ class FulfillmentStatusTest {
     }
 
     @Test
-    fun `toTicketPayload sets two copies for admin_direct source`() {
+    fun `toTicketPayload defaults to one copy unless specified`() {
         val order = BusinessOrder(
             id = "ord_1",
             tenantId = "ten_1",
@@ -53,8 +53,11 @@ class FulfillmentStatusTest {
             total = 5000.0
         )
         val payload = order.toTicketPayload("Test Bar")
-        assertEquals(2, payload.copies)
+        assertEquals(1, payload.copies)
         assertEquals("101", payload.purchaseNumber)
         assertEquals("Test Bar", payload.tenant)
+
+        val twoCopies = order.toTicketPayload("Test Bar", copies = 2)
+        assertEquals(2, twoCopies.copies)
     }
 }
