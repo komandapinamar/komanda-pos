@@ -5,6 +5,7 @@ import com.komanda.business.core.model.TicketItem
 import com.komanda.business.core.model.TicketItemOption
 import com.komanda.business.core.model.TicketPayload
 import com.komanda.business.core.model.TicketSummary
+import com.komanda.business.hardware.printing.renderer.EscPosTicketRenderer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue

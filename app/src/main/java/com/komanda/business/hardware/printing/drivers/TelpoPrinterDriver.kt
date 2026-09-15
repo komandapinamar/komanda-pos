@@ -1,7 +1,10 @@
-package com.komanda.business.hardware.printing
+package com.komanda.business.hardware.printing.drivers
 
 import android.content.Context
 import com.komanda.business.core.model.TicketPayload
+import com.komanda.business.hardware.printing.enums.PrinterType
+import com.komanda.business.hardware.printing.model.PrintResult
+import com.komanda.business.hardware.printing.PrinterDriver
 
 /**
  * Adapter for the internal thermal printer on Telpo POS terminals (TPS680, etc.).

@@ -1,4 +1,4 @@
-package com.komanda.business.hardware.printing
+package com.komanda.business.hardware.printing.enums
 
 /**
  * Functional role assigned to a printer in the POS ecosystem.

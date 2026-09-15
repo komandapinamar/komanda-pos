@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -51,13 +50,12 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.komanda.business.core.model.AdminDashboardOrder
 import com.komanda.business.core.network.ConnectionState
 import com.komanda.business.features.billing.BillingService
 import com.komanda.business.features.orders.OrderManager
-import com.komanda.business.hardware.printing.PrinterConfig
-import com.komanda.business.hardware.printing.PrinterRole
+import com.komanda.business.hardware.printing.model.PrinterConfig
+import com.komanda.business.hardware.printing.enums.PrinterRole
 import com.komanda.business.ui.theme.Amber400
 import com.komanda.business.ui.theme.Amber600
 import com.komanda.business.ui.theme.Emerald600
@@ -108,7 +106,7 @@ fun OrdersDashboardScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (!tenantName.isNullOrBlank()) "Komanda Business - ${tenantName.uppercase()}" else "Komanda Business",
+                            text = if (!tenantName.isNullOrBlank()) "Komanda POS - ${tenantName.uppercase()}" else "Komanda Business",
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Normal,
                             letterSpacing = 0.5.sp,

@@ -1,7 +1,11 @@
-package com.komanda.business.hardware.printing
+package com.komanda.business.hardware.printing.drivers
 
 import com.dantsu.escposprinter.connection.tcp.TcpConnection
 import com.komanda.business.core.model.TicketPayload
+import com.komanda.business.hardware.printing.renderer.EscPosTicketRenderer
+import com.komanda.business.hardware.printing.enums.PrinterType
+import com.komanda.business.hardware.printing.model.PrintResult
+import com.komanda.business.hardware.printing.PrinterDriver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

@@ -1,4 +1,4 @@
-package com.komanda.business.hardware.printing
+package com.komanda.business.hardware.printing.enums
 
 /**
  * Event triggers that determine when a printer automatically outputs a ticket.

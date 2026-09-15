@@ -1,18 +1,8 @@
 package com.komanda.business.hardware.printing
 
 import com.komanda.business.core.model.TicketPayload
-
-sealed class PrintResult {
-    data object Success : PrintResult()
-    data class Error(val code: String, val message: String, val cause: Throwable? = null) : PrintResult()
-}
-
-enum class PrinterType {
-    TELPO_INTERNAL,
-    USB_ESC_POS,
-    NETWORK_ESC_POS,
-    BLUETOOTH_ESC_POS
-}
+import com.komanda.business.hardware.printing.enums.PrinterType
+import com.komanda.business.hardware.printing.model.PrintResult
 
 interface PrinterDriver {
     val type: PrinterType

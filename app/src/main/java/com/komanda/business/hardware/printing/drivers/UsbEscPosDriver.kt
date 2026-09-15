@@ -1,4 +1,4 @@
-package com.komanda.business.hardware.printing
+package com.komanda.business.hardware.printing.drivers
 
 import android.app.PendingIntent
 import android.content.Context
@@ -10,6 +10,10 @@ import android.util.Log
 import com.dantsu.escposprinter.connection.usb.UsbConnection
 import com.dantsu.escposprinter.connection.usb.UsbPrintersConnections
 import com.komanda.business.core.model.TicketPayload
+import com.komanda.business.hardware.printing.renderer.EscPosTicketRenderer
+import com.komanda.business.hardware.printing.enums.PrinterType
+import com.komanda.business.hardware.printing.model.PrintResult
+import com.komanda.business.hardware.printing.PrinterDriver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 

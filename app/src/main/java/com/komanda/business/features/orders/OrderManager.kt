@@ -8,7 +8,7 @@ import com.komanda.business.core.network.ConnectionState
 import com.komanda.business.core.network.KomandaApi
 import com.komanda.business.core.network.SseOrderEventListener
 import com.komanda.business.core.network.TransitionOrderRequest
-import com.komanda.business.hardware.printing.PrinterConfig
+import com.komanda.business.hardware.printing.model.PrinterConfig
 import com.komanda.business.hardware.printing.PrinterRouter
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers

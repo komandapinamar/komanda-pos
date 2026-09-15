@@ -1,7 +1,10 @@
-package com.komanda.business.hardware.printing
+package com.komanda.business.hardware.printing.model
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.komanda.business.hardware.printing.enums.PrintTrigger
+import com.komanda.business.hardware.printing.enums.PrinterRole
+import com.komanda.business.hardware.printing.enums.PrinterType
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow

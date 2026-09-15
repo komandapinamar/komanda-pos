@@ -6,6 +6,13 @@ import com.komanda.business.core.model.TicketCustomer
 import com.komanda.business.core.model.TicketItem
 import com.komanda.business.core.model.TicketPayload
 import com.komanda.business.core.model.TicketSummary
+import com.komanda.business.hardware.printing.enums.PrintTrigger
+import com.komanda.business.hardware.printing.enums.PrinterRole
+import com.komanda.business.hardware.printing.factory.PrinterDriverFactory
+import com.komanda.business.hardware.printing.model.PrintResult
+import com.komanda.business.hardware.printing.model.PrinterConfig
+import com.komanda.business.hardware.printing.model.PrinterConfigRepository
+import com.komanda.business.hardware.printing.renderer.EscPosTicketRenderer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
@@ -17,7 +24,8 @@ import java.util.Collections
  */
 class PrinterRouter(
     private val context: Context,
-    val repository: PrinterConfigRepository = PrinterConfigRepository(context)
+    val repository: PrinterConfigRepository = PrinterConfigRepository(context),
+    private val driverFactory: PrinterDriverFactory = PrinterDriverFactory(context)
 ) {
     private val tag = "PrinterRouter"
 
@@ -35,24 +43,7 @@ class PrinterRouter(
      * Resolves an executable [PrinterDriver] from a given configuration profile.
      */
     fun getDriverForConfig(config: PrinterConfig): PrinterDriver {
-        return when (config.type) {
-            PrinterType.USB_ESC_POS -> UsbEscPosDriver(context)
-            PrinterType.NETWORK_ESC_POS -> {
-                val addr = config.address ?: "192.168.1.100:9100"
-                val parts = addr.split(":")
-                val host = parts[0].trim()
-                val port = parts.getOrNull(1)?.toIntOrNull() ?: 9100
-                NetworkEscPosDriver(host = host, port = port)
-            }
-            PrinterType.BLUETOOTH_ESC_POS -> {
-                BluetoothEscPosDriver(
-                    context = context,
-                    macAddress = config.address ?: "",
-                    deviceName = config.name
-                )
-            }
-            PrinterType.TELPO_INTERNAL -> TelpoPrinterDriver(context)
-        }
+        return driverFactory.createDriver(config)
     }
 
     /**

@@ -1,7 +1,8 @@
-package com.komanda.business.hardware.printing
+package com.komanda.business.hardware.printing.renderer
 
 import com.komanda.business.core.model.FiscalInvoiceData
 import com.komanda.business.core.model.TicketPayload
+import com.komanda.business.hardware.printing.enums.PrinterRole
 import java.io.ByteArrayOutputStream
 import java.nio.charset.Charset
 import java.text.DecimalFormat

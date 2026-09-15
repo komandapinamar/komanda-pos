@@ -56,12 +56,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.komanda.business.hardware.printing.PrintResult
-import com.komanda.business.hardware.printing.PrintTrigger
-import com.komanda.business.hardware.printing.PrinterConfig
-import com.komanda.business.hardware.printing.PrinterRole
+import com.komanda.business.hardware.printing.model.PrintResult
+import com.komanda.business.hardware.printing.enums.PrintTrigger
+import com.komanda.business.hardware.printing.model.PrinterConfig
+import com.komanda.business.hardware.printing.enums.PrinterRole
 import com.komanda.business.hardware.printing.PrinterRouter
-import com.komanda.business.hardware.printing.PrinterType
+import com.komanda.business.hardware.printing.enums.PrinterType
 import com.komanda.business.ui.theme.Amber400
 import com.komanda.business.ui.theme.Emerald600
 import com.komanda.business.ui.theme.Red400

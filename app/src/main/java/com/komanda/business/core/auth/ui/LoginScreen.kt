@@ -89,7 +89,7 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = "Komanda Business",
+                    text = "Komanda POS",
                     style = MaterialTheme.typography.headlineMedium.copy(
                         fontWeight = FontWeight.Thin,
                         letterSpacing = 1.sp

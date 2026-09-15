@@ -40,10 +40,8 @@ import com.komanda.business.features.orders.ui.OrdersDashboardScreen
 import com.komanda.business.features.pos.PosManager
 import com.komanda.business.features.pos.ui.PosScreen
 import com.komanda.business.features.settings.ui.PrinterSettingsScreen
-import com.komanda.business.hardware.printing.PrinterDriver
 import com.komanda.business.hardware.printing.PrinterRouter
-import com.komanda.business.hardware.printing.TelpoPrinterDriver
-import com.komanda.business.hardware.printing.UsbEscPosDriver
+import com.komanda.business.hardware.printing.drivers.UsbEscPosDriver
 import com.komanda.business.ui.theme.Amber400
 import com.komanda.business.ui.theme.KomandaTheme
 import com.komanda.business.ui.theme.Zinc950

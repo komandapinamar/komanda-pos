@@ -4,8 +4,8 @@ import com.komanda.business.core.model.AdminDashboardOrder
 import com.komanda.business.core.model.FiscalInvoiceData
 import com.komanda.business.core.network.CreateInvoiceRequest
 import com.komanda.business.core.network.KomandaApi
-import com.komanda.business.hardware.printing.PrintResult
-import com.komanda.business.hardware.printing.PrinterRole
+import com.komanda.business.hardware.printing.model.PrintResult
+import com.komanda.business.hardware.printing.enums.PrinterRole
 import com.komanda.business.hardware.printing.PrinterRouter
 
 sealed class BillingResult {
