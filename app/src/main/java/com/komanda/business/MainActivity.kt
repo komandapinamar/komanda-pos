@@ -33,10 +33,12 @@ import com.komanda.business.core.auth.ui.NoActiveTenantScreen
 import com.komanda.business.core.auth.ui.TenantSelectionScreen
 import com.komanda.business.core.network.KomandaApi
 import com.komanda.business.core.network.NetworkClient
+import com.komanda.business.core.network.SharedPreferencesSseCursorStorage
 import com.komanda.business.core.network.SseOrderEventListener
 import com.komanda.business.features.billing.BillingService
 import com.komanda.business.features.orders.OrderManager
 import com.komanda.business.features.orders.ui.OrdersDashboardScreen
+import com.komanda.business.features.pos.CheckoutAttemptStore
 import com.komanda.business.features.pos.PosManager
 import com.komanda.business.features.pos.ui.PosScreen
 import com.komanda.business.features.settings.ui.PrinterSettingsScreen
@@ -235,7 +237,8 @@ class MainActivity : ComponentActivity() {
                             val sseListener = SseOrderEventListener(
                                 baseUrl = currentBaseUrl,
                                 tenantId = session.tenantId,
-                                authToken = session.token
+                                authToken = session.token,
+                                cursorStorage = SharedPreferencesSseCursorStorage(this@MainActivity)
                             )
                             OrderManager(
                                 tenantId = session.tenantId,
@@ -250,11 +253,14 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
+                        val attemptStore = remember { CheckoutAttemptStore(this@MainActivity) }
+
                         val posMgr = remember(session.tenantId) {
                             PosManager(
                                 tenantId = session.tenantId,
                                 api = api,
-                                printerRouter = printerRouter
+                                printerRouter = printerRouter,
+                                attemptStore = attemptStore
                             ).also { activePosManager = it }
                         }
 

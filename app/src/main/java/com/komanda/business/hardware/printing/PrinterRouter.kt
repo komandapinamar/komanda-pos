@@ -25,15 +25,14 @@ import java.util.Collections
 class PrinterRouter(
     private val context: Context,
     val repository: PrinterConfigRepository = PrinterConfigRepository(context),
-    private val driverFactory: PrinterDriverFactory = PrinterDriverFactory(context)
+    private val driverFactory: PrinterDriverFactory = PrinterDriverFactory(context),
+    val journalStore: com.komanda.business.hardware.printing.model.PrintJournalStore =
+        com.komanda.business.hardware.printing.model.PrintJournalStore(context)
 ) {
     private val tag = "PrinterRouter"
 
     val printers: StateFlow<List<PrinterConfig>> = repository.printers
     val masterAutoPrintEnabled: StateFlow<Boolean> = repository.masterAutoPrintEnabled
-
-    // Memory cache of printed order IDs to prevent any duplicate/looping auto-prints
-    private val alreadyPrintedOrderIds: MutableSet<String> = Collections.synchronizedSet(mutableSetOf())
 
     fun setMasterAutoPrint(enabled: Boolean) {
         repository.setMasterAutoPrint(enabled)
@@ -55,18 +54,21 @@ class PrinterRouter(
             return@withContext
         }
 
-        if (payload.orderId in alreadyPrintedOrderIds) {
-            Log.d(tag, "Order ${payload.orderId} was already printed. Skipping.")
-            return@withContext
-        }
-        alreadyPrintedOrderIds.add(payload.orderId)
-
         val targets = printers.value.filter {
             it.role != PrinterRole.DISABLED &&
                     (it.trigger == PrintTrigger.ON_NEW_ORDER || it.trigger == PrintTrigger.ALWAYS_AUTOMATIC)
         }
 
-        dispatchToPrinters(payload, targets, eventDesc = "NEW_ORDER")
+        val unprintedTargets = targets.filter {
+            !journalStore.isDestinationPrinted(payload.orderId, "${it.id}_${it.role}")
+        }
+
+        if (unprintedTargets.isEmpty() && targets.isNotEmpty()) {
+            Log.d(tag, "All targets for order ${payload.orderId} were already printed. Skipping.")
+            return@withContext
+        }
+
+        dispatchToPrinters(payload, unprintedTargets, eventDesc = "NEW_ORDER")
     }
 
     /**
@@ -78,18 +80,21 @@ class PrinterRouter(
             return@withContext
         }
 
-        if (payload.orderId in alreadyPrintedOrderIds) {
-            Log.d(tag, "Direct order ${payload.orderId} was already printed. Skipping.")
-            return@withContext
-        }
-        alreadyPrintedOrderIds.add(payload.orderId)
-
         val targets = printers.value.filter {
             it.role != PrinterRole.DISABLED &&
                     (it.trigger == PrintTrigger.ON_DIRECT_POS_ORDER || it.trigger == PrintTrigger.ALWAYS_AUTOMATIC)
         }
 
-        dispatchToPrinters(payload, targets, eventDesc = "DIRECT_POS_ORDER")
+        val unprintedTargets = targets.filter {
+            !journalStore.isDestinationPrinted(payload.orderId, "${it.id}_${it.role}")
+        }
+
+        if (unprintedTargets.isEmpty() && targets.isNotEmpty()) {
+            Log.d(tag, "All targets for direct order ${payload.orderId} were already printed. Skipping.")
+            return@withContext
+        }
+
+        dispatchToPrinters(payload, unprintedTargets, eventDesc = "DIRECT_POS_ORDER")
     }
 
     /**
@@ -171,13 +176,33 @@ class PrinterRouter(
         }
 
         for (config in targets) {
+            val destination = "${config.id}_${config.role}"
             try {
                 val driver = getDriverForConfig(config)
                 val bytes = EscPosTicketRenderer.renderTicket(payload.copy(copies = config.copies), config.role)
                 val result = driver.printRaw(bytes)
-                Log.i(tag, "Auto-printed [$eventDesc] on '${config.name}' (${config.role}): $result")
+                if (result is PrintResult.Success) {
+                    journalStore.recordStatus(
+                        payload.orderId,
+                        destination,
+                        com.komanda.business.hardware.printing.model.PrintStatus.PRINTED
+                    )
+                    Log.i(tag, "Auto-printed [$eventDesc] on '${config.name}' (${config.role}): $result")
+                } else {
+                    journalStore.recordStatus(
+                        payload.orderId,
+                        destination,
+                        com.komanda.business.hardware.printing.model.PrintStatus.FAILED
+                    )
+                    Log.w(tag, "Failed auto-printing on '${config.name}': $result")
+                }
             } catch (e: Exception) {
-                Log.e(tag, "Failed auto-printing on '${config.name}'", e)
+                journalStore.recordStatus(
+                    payload.orderId,
+                    destination,
+                    com.komanda.business.hardware.printing.model.PrintStatus.UNCERTAIN
+                )
+                Log.e(tag, "Uncertain error auto-printing on '${config.name}'", e)
             }
         }
     }
