@@ -29,7 +29,8 @@ class SseOrderEventListener(
     private val baseUrl: String,
     private val tenantId: String,
     private val authToken: String? = null,
-    private val moshi: Moshi = Moshi.Builder().build()
+    private val moshi: Moshi = Moshi.Builder().build(),
+    private val cursorStorage: SseCursorStorage? = null
 ) {
 
     private val tag = "SseOrderListener"
@@ -42,7 +43,7 @@ class SseOrderEventListener(
     val events: SharedFlow<TenantOrderEvent> = _events.asSharedFlow()
 
     private var eventSource: EventSource? = null
-    private var lastSequence: String? = null
+    private var lastSequence: String? = cursorStorage?.getCursor(tenantId)
     private var isRunning = false
 
     private val sseClient = OkHttpClient.Builder()
@@ -91,6 +92,7 @@ class SseOrderEventListener(
             override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
                 if (id != null) {
                     lastSequence = id
+                    cursorStorage?.saveCursor(tenantId, id)
                 }
 
                 _connectionState.value = ConnectionState.LIVE

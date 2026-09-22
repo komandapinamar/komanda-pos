@@ -23,7 +23,8 @@ class PosManager(
     private val tenantId: String,
     private val api: KomandaApi,
     private val printerRouter: PrinterRouter? = null,
-    private val tenantName: String = "Komanda"
+    private val tenantName: String = "Komanda",
+    private val attemptStore: CheckoutAttemptStore? = null
 ) {
 
     private val tag = "PosManager"
@@ -109,14 +110,22 @@ class PosManager(
                 )
             }
 
+        val customerName = _customerName.value.trim()
+        val notes = _notes.value.trim().ifBlank { null }
         val body = CreateDirectOrderRequest(
             items = requestItems,
-            customer = DirectOrderCustomerRequest(name = _customerName.value.trim()),
-            notes = _notes.value.trim().ifBlank { null }
+            customer = DirectOrderCustomerRequest(name = customerName),
+            notes = notes
         )
 
+        val itemsList = _quantities.value
+            .filter { it.value > 0 }
+            .map { it.key to it.value }
+        val cartHash = CheckoutAttemptStore.computeCartHash(itemsList, customerName, notes)
+        val attempt = attemptStore?.getOrStartAttempt(tenantId, cartHash)
+        val idempotencyKey = attempt?.idempotencyKey ?: UUID.randomUUID().toString()
+
         return try {
-            val idempotencyKey = UUID.randomUUID().toString()
             val response = api.createDirectOrder(
                 tenantId = tenantId,
                 idempotencyKey = idempotencyKey,
@@ -125,11 +134,16 @@ class PosManager(
 
             if (!response.isSuccessful || response.body() == null) {
                 val errorMsg = response.errorBody()?.string() ?: "Error al crear el pedido."
+                attempt?.let { attemptStore?.markAttemptUnknown(tenantId, it) }
                 _submitting.value = false
                 return DirectOrderResult.Error(errorMsg)
             }
 
             val order = response.body()!!.toDashboardOrder()
+            attempt?.let {
+                attemptStore?.markAttemptConfirmed(tenantId, it, order.id)
+                attemptStore?.clearConfirmedAttempt(tenantId)
+            }
 
             // Dispatches automatic printing according to configured printer triggers
             printerRouter?.let { router ->
@@ -146,6 +160,7 @@ class PosManager(
             DirectOrderResult.Success(order)
         } catch (e: Exception) {
             Log.e(tag, "Error submitting direct order", e)
+            attempt?.let { attemptStore?.markAttemptUnknown(tenantId, it) }
             _submitting.value = false
             DirectOrderResult.Error(e.message ?: "Error al crear el pedido.")
         }
