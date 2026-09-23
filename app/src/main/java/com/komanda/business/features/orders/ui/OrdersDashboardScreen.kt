@@ -54,6 +54,7 @@ import com.komanda.business.core.model.AdminDashboardOrder
 import com.komanda.business.core.network.ConnectionState
 import com.komanda.business.features.billing.BillingService
 import com.komanda.business.features.orders.OrderManager
+import com.komanda.business.features.orders.SnapshotState
 import com.komanda.business.hardware.printing.model.PrinterConfig
 import com.komanda.business.hardware.printing.enums.PrinterRole
 import com.komanda.business.ui.theme.Amber400
@@ -79,6 +80,7 @@ fun OrdersDashboardScreen(
     onLogout: (() -> Unit)? = null
 ) {
     val orders by orderManager.orders.collectAsState()
+    val snapshotState by orderManager.snapshotState.collectAsState()
     val connectionState by orderManager.connectionState.collectAsState()
     val lastUpdatedAt by orderManager.lastUpdatedAt.collectAsState()
     val transitioningOrderId by orderManager.transitioningOrderId.collectAsState()
@@ -262,7 +264,16 @@ fun OrdersDashboardScreen(
                         Spacer(modifier = Modifier.height(16.dp))
 
                         // Empty State or Orders List
-                        if (orders.isEmpty()) {
+                        if (snapshotState == SnapshotState.Error) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp)) {
+                                Text("No se pudieron actualizar los pedidos. Verificá la conexión.", color = Red400)
+                                OutlinedButton(onClick = { orderManager.refreshOrders() }) { Text("Reintentar") }
+                            }
+                        }
+                        if (orders.isEmpty() && snapshotState == SnapshotState.Loading) {
+                            Text("Cargando pedidos...", color = Zinc300, modifier = Modifier.padding(vertical = 40.dp))
+                        } else if (orders.isEmpty() && snapshotState == SnapshotState.Ready) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -351,6 +362,9 @@ fun ConnectionBadge(connectionState: ConnectionState) {
             Zinc700.copy(alpha = 0.2f),
             Zinc700.copy(alpha = 0.4f),
             Zinc300
+        )
+        ConnectionState.UNAUTHORIZED -> Quad(
+            "Sesion no autorizada", Red400.copy(alpha = 0.15f), Red400, Red400
         )
     }
 

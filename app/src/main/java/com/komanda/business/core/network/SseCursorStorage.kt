@@ -21,10 +21,10 @@ class SharedPreferencesSseCursorStorage(
     }
 
     override fun saveCursor(tenantId: String, cursor: String) {
-        prefs.edit().putString("cursor_$tenantId", cursor).apply()
+        check(prefs.edit().putString("cursor_$tenantId", cursor).commit())
     }
 
     override fun clearCursor(tenantId: String) {
-        prefs.edit().remove("cursor_$tenantId").apply()
+        check(prefs.edit().remove("cursor_$tenantId").commit())
     }
 }

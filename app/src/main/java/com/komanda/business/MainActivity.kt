@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -24,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.komanda.business.core.audio.OrderAnnouncer
 import com.komanda.business.core.auth.AuthManager
 import com.komanda.business.core.auth.AuthState
@@ -249,7 +252,22 @@ class MainActivity : ComponentActivity() {
                             ).also {
                                 activeOrderManager?.stopListening()
                                 activeOrderManager = it
-                                it.startListening()
+                            }
+                        }
+
+                        DisposableEffect(orderMgr) {
+                            val observer = LifecycleEventObserver { _, event ->
+                                when (event) {
+                                    Lifecycle.Event.ON_START -> orderMgr.startListening()
+                                    Lifecycle.Event.ON_STOP -> orderMgr.stopListening()
+                                    else -> Unit
+                                }
+                            }
+                            lifecycle.addObserver(observer)
+                            if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) orderMgr.startListening()
+                            onDispose {
+                                lifecycle.removeObserver(observer)
+                                orderMgr.stopListening()
                             }
                         }
 

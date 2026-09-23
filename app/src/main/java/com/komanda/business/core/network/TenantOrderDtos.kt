@@ -85,3 +85,9 @@ data class TenantOrderEvent(
     val orderId: String,
     val sequence: String
 )
+
+@JsonClass(generateAdapter = true)
+data class TenantOrderResetEvent(
+    val reason: String? = null,
+    val headSequence: String? = null
+)
