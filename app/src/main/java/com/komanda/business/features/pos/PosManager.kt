@@ -102,7 +102,7 @@ class PosManager(
     }
 
     val selectedCount: Int
-        get() = _quantities.value.values.sumOf { if (it > 0) 1 as Int else 0 as Int }
+        get() = _quantities.value.values.sum()
 
     suspend fun submitDirectOrder(): DirectOrderResult {
         if (selectedCount == 0) {

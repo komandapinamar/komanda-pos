@@ -90,8 +90,7 @@ class EscPosTicketRendererTest {
         assertTrue("Must include grand total", text.contains("Total: $9.500"))
         assertTrue("Must include payment status", text.contains("COBRAR EN CAJA"))
 
-        // ASCII art & branding
-        assertTrue("Must include ASCII art cloche/food emblem", text.contains(".------.") && text.contains("| ~~~~ |"))
+        // Branding
         assertTrue("Must include thank you message", text.contains("¡Gracias por tu compra!"))
 
         // Standardized pickup code

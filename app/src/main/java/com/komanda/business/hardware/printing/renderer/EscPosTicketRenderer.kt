@@ -294,6 +294,11 @@ object EscPosTicketRenderer {
             writeRule(stream)
         }
 
+        // todo: here we will generate the qr to check the status of the order
+        //
+        // generateQR(id: int)
+
+
         // Footer: ASCII Art & Thank You Branding
         renderCounterFooter(stream)
 
@@ -303,12 +308,6 @@ object EscPosTicketRenderer {
     }
 
     private fun renderCounterFooter(stream: ByteArrayOutputStream) {
-        stream.write(CMD_ALIGN_CENTER)
-        writeText(stream, "   ( (\n")
-        writeText(stream, "    ) )\n")
-        writeText(stream, " .------.\n")
-        writeText(stream, " | ~~~~ |\n")
-        writeText(stream, "  '----'\n")
         stream.write(CMD_BOLD_ON)
         writeText(stream, "¡Gracias por tu compra!\n")
         stream.write(CMD_BOLD_OFF)

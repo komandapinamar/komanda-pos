@@ -1,7 +1,9 @@
 package com.komanda.business.features.pos.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +31,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -83,10 +86,85 @@ fun PosScreen(
         posManager.loadCatalog()
     }
 
-    val selectedCount = posManager.selectedCount
+    val totalUnits = remember(quantities) { quantities.values.sum() }
+    val cartSubtotal = remember(items, quantities) {
+        quantities.entries.sumOf { (id, qty) ->
+            val item = items.find { it.id == id }
+            val price = item?.price?.toDoubleOrNull() ?: 0.0
+            price * qty
+        }
+    }
 
     Scaffold(
-        containerColor = Zinc950
+        containerColor = Zinc950,
+        bottomBar = {
+            Surface(
+                color = Zinc900,
+                shadowElevation = 8.dp,
+                border = BorderStroke(1.dp, Zinc800)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = if (totalUnits > 0) {
+                                "$totalUnits producto${if (totalUnits != 1) "s" else ""}"
+                            } else {
+                                "Ningún producto seleccionado"
+                            },
+                            color = Color.White,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        if (totalUnits > 0 && cartSubtotal > 0) {
+                            Text(
+                                text = "Total: $${cartSubtotal.toLong()}",
+                                color = KomandaTokens.AccentTertiary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            errorMessage = null
+                            scope.launch {
+                                val result = posManager.submitDirectOrder()
+                                when (result) {
+                                    is DirectOrderResult.Success -> {
+                                        onOrderCreated()
+                                    }
+                                    is DirectOrderResult.Error -> {
+                                        errorMessage = result.message
+                                    }
+                                }
+                            }
+                        },
+                        enabled = !isSubmitting && totalUnits > 0,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = KomandaTokens.AccentTertiary,
+                            contentColor = KomandaTokens.AccentPrimary,
+                            disabledContainerColor = KomandaTokens.AccentTertiary.copy(alpha = 0.4f),
+                            disabledContentColor = KomandaTokens.AccentPrimary.copy(alpha = 0.4f)
+                        ),
+                        shape = RoundedCornerShape(2.dp),
+                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
+                    ) {
+                        Text(
+                            text = if (isSubmitting) "Creando pedido..." else "Crear pedido directo",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -347,66 +425,6 @@ fun PosScreen(
                     }
                 }
             }
-
-            // Bottom Action Bar
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(2.dp),
-                    colors = CardDefaults.cardColors(containerColor = Zinc900),
-                    border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Zinc800))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (selectedCount > 0) {
-                                "$selectedCount producto${if (selectedCount != 1) "s" else ""} seleccionado${if (selectedCount != 1) "s" else ""}"
-                            } else {
-                                "Ningún producto seleccionado"
-                            },
-                            color = Zinc400,
-                            fontSize = 14.sp
-                        )
-
-                        Button(
-                            onClick = {
-                                errorMessage = null
-                                scope.launch {
-                                    val result = posManager.submitDirectOrder()
-                                    when (result) {
-                                        is DirectOrderResult.Success -> {
-                                            onOrderCreated()
-                                        }
-                                        is DirectOrderResult.Error -> {
-                                            errorMessage = result.message
-                                        }
-                                    }
-                                }
-                            },
-                            enabled = !isSubmitting && selectedCount > 0,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = KomandaTokens.AccentTertiary,
-                                contentColor = KomandaTokens.AccentPrimary,
-                                disabledContainerColor = KomandaTokens.AccentTertiary.copy(alpha = 0.4f),
-                                disabledContentColor = KomandaTokens.AccentPrimary.copy(alpha = 0.4f)
-                            ),
-                            shape = RoundedCornerShape(2.dp),
-                            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
-                        ) {
-                            Text(
-                                text = if (isSubmitting) "Creando pedido..." else "Crear pedido directo",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
-                    }
-                }
-            }
         }
     }
 }
@@ -418,7 +436,9 @@ fun DirectOrderCatalogItemRow(
     onQuantityChange: (Int) -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onQuantityChange(quantity + 1) },
         shape = RoundedCornerShape(2.dp),
         colors = CardDefaults.cardColors(containerColor = Zinc800),
         border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Zinc700))
