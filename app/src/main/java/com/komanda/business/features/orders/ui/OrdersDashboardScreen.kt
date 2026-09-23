@@ -51,15 +51,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.komanda.business.core.model.AdminDashboardOrder
+import com.komanda.business.core.model.OrderStatuses
 import com.komanda.business.core.network.ConnectionState
 import com.komanda.business.features.billing.BillingService
 import com.komanda.business.features.orders.OrderManager
 import com.komanda.business.features.orders.SnapshotState
 import com.komanda.business.hardware.printing.model.PrinterConfig
 import com.komanda.business.hardware.printing.enums.PrinterRole
-import com.komanda.business.ui.theme.Amber400
-import com.komanda.business.ui.theme.Amber600
 import com.komanda.business.ui.theme.Emerald600
+import com.komanda.business.ui.theme.KomandaTokens
 import com.komanda.business.ui.theme.Red400
 import com.komanda.business.ui.theme.Zinc100
 import com.komanda.business.ui.theme.Zinc300
@@ -110,15 +110,8 @@ fun OrdersDashboardScreen(
                         Text(
                             text = if (!tenantName.isNullOrBlank()) "Komanda POS - ${tenantName.uppercase()}" else "Komanda Business",
                             fontSize = 24.sp,
-                            fontWeight = FontWeight.Normal,
+                            fontWeight = FontWeight.Bold,
                             letterSpacing = 0.5.sp,
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Pedidos en curso",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.SemiBold,
                             color = Color.White
                         )
                         Spacer(modifier = Modifier.height(6.dp))
@@ -145,7 +138,7 @@ fun OrdersDashboardScreen(
                                 text = "Impresión Automática",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = if (masterAutoPrint) Amber400 else Zinc400
+                                color = if (masterAutoPrint) KomandaTokens.AccentTertiary else Zinc400
                             )
                             Spacer(modifier = Modifier.width(6.dp))
                             Switch(
@@ -153,7 +146,7 @@ fun OrdersDashboardScreen(
                                 onCheckedChange = { orderManager.setMasterAutoPrint(it) },
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Zinc950,
-                                    checkedTrackColor = Amber400,
+                                    checkedTrackColor = KomandaTokens.AccentTertiary,
                                     uncheckedThumbColor = Zinc400,
                                     uncheckedTrackColor = Zinc800
                                 )
@@ -190,8 +183,8 @@ fun OrdersDashboardScreen(
                         Button(
                             onClick = onNavigateToPos,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Amber400,
-                                contentColor = Zinc950
+                                containerColor = KomandaTokens.AccentTertiary,
+                                contentColor = KomandaTokens.AccentPrimary
                             ),
                             shape = RoundedCornerShape(2.dp),
                             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
@@ -353,9 +346,9 @@ fun ConnectionBadge(connectionState: ConnectionState) {
         )
         ConnectionState.RECONNECTING -> Quad(
             "Conexion Reconectando",
-            Amber600.copy(alpha = 0.15f),
-            Amber600.copy(alpha = 0.4f),
-            Amber400
+            KomandaTokens.StatusPreparingBg,
+            KomandaTokens.StatusPreparing.copy(alpha = 0.4f),
+            KomandaTokens.StatusPreparing
         )
         ConnectionState.CONNECTING -> Quad(
             "Conexion Conectando",
@@ -413,7 +406,7 @@ fun AdminDashboardOrderCard(
                     ) {
                         Box(
                             modifier = Modifier
-                                .background(Amber400, CircleShape)
+                                .background(Color.White, CircleShape)
                                 .padding(horizontal = 12.dp, vertical = 4.dp)
                         ) {
                             Text(
@@ -422,6 +415,22 @@ fun AdminDashboardOrderCard(
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold
                             )
+                        }
+
+                        if (!order.pickupPin.isNullOrBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .background(KomandaTokens.StatusReadyBg, CircleShape)
+                                    .border(1.dp, KomandaTokens.StatusReady, CircleShape)
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "PIN: #${order.pickupPin}",
+                                    color = KomandaTokens.StatusReady,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
 
                         Box(
@@ -460,12 +469,29 @@ fun AdminDashboardOrderCard(
                         color = Zinc400
                     )
 
+                    Spacer(modifier = Modifier.height(10.dp))
+                    val statusText = AdminDashboardOrder.statusLabel(order.status)
+                    val isReady = order.status == OrderStatuses.READY
+                    val statusBgColor = if (isReady) KomandaTokens.StatusReadyBg else KomandaTokens.StatusPreparingBg
+                    val statusTextColor = if (isReady) KomandaTokens.StatusReady else KomandaTokens.StatusPreparing
+                    val statusBorderColor = if (isReady) KomandaTokens.StatusReady else KomandaTokens.StatusPreparing
+
+                    Box(
+                        modifier = Modifier
+                            .background(statusBgColor, RoundedCornerShape(4.dp))
+                            .border(1.5.dp, statusBorderColor, RoundedCornerShape(4.dp))
+                            .padding(horizontal = 14.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = statusText.uppercase(),
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp,
+                            color = statusTextColor
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(6.dp))
-                    Text(
-                        text = "Estado: ${AdminDashboardOrder.statusLabel(order.status)}",
-                        fontSize = 14.sp,
-                        color = Zinc100
-                    )
                     if (!order.paymentStatus.isNullOrBlank()) {
                         Text(
                             text = "Pago: ${order.paymentStatus}",
@@ -487,20 +513,23 @@ fun AdminDashboardOrderCard(
                 ) {
                     val nextLabel = AdminDashboardOrder.nextStatusLabel(order.status)
                     if (nextLabel != null) {
+                        val isNextReady = AdminDashboardOrder.nextStatus(order.status) == OrderStatuses.READY
+                        val btnBgColor = if (isNextReady) KomandaTokens.StatusReady else KomandaTokens.AccentTertiary
+                        val btnFgColor = if (isNextReady) Color.White else KomandaTokens.AccentPrimary
                         Button(
                             onClick = onTransition,
                             enabled = !isTransitioning,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Amber400,
-                                contentColor = Zinc950
+                                containerColor = btnBgColor,
+                                contentColor = btnFgColor
                             ),
                             shape = RoundedCornerShape(2.dp),
-                            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp)
+                            contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp)
                         ) {
                             Text(
                                 text = if (isTransitioning) "Actualizando..." else nextLabel,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -704,7 +733,7 @@ private fun PrintTargetDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(p.name, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                                Text("[$roleLabel]", fontSize = 12.sp, color = Amber400)
+                                Text("[$roleLabel]", fontSize = 12.sp, color = KomandaTokens.AccentTertiary)
                             }
                         }
                     }
@@ -714,7 +743,7 @@ private fun PrintTargetDialog(
                             onClick = { onSelectPrinter("ALL") },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(2.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Amber400, contentColor = Zinc950)
+                            colors = ButtonDefaults.buttonColors(containerColor = KomandaTokens.AccentTertiary, contentColor = KomandaTokens.AccentPrimary)
                         ) {
                             Text("Todas las impresoras activas", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }

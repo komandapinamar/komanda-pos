@@ -109,7 +109,8 @@ data class OrderEventDto(
 
 @JsonClass(generateAdapter = true)
 data class TransitionOrderRequest(
-    val fulfillmentStatus: String
+    val fulfillmentStatus: String,
+    val pickupPin: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -129,7 +130,8 @@ data class DirectOrderCustomerRequest(
 data class CreateDirectOrderRequest(
     val items: List<DirectOrderItemRequest>,
     val customer: DirectOrderCustomerRequest,
-    val notes: String? = null
+    val notes: String? = null,
+    val discountCode: String? = null
 )
 
 @JsonClass(generateAdapter = true)

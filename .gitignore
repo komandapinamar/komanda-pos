@@ -8,4 +8,7 @@ local.properties
 /captures
 .externalNativeBuild
 .cxx
+*.apk
+*.aab
+app/release/
 

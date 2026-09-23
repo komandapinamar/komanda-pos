@@ -40,6 +40,7 @@ data class FiscalInvoiceData(
 data class TicketPayload(
     val orderId: String,
     val purchaseNumber: String? = null,
+    val pickupPin: String? = null,
     val source: String = "admin_direct",
     val copies: Int = 1,
     val tenant: String = "Komanda",

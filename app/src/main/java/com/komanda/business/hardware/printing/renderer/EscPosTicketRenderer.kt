@@ -141,6 +141,10 @@ object EscPosTicketRenderer {
             writeText(stream, "Orden #${payload.orderId}\n")
         }
 
+        payload.pickupPin?.takeIf { it.isNotBlank() }?.let { pin ->
+            writeText(stream, "PIN Retiro: #$pin\n")
+        }
+
         stream.write(CMD_BOLD_OFF)
         writeText(stream, "${formatTimestamp(payload.approvedAt)}\n")
         writeRule(stream)
@@ -273,6 +277,21 @@ object EscPosTicketRenderer {
         // AFIP Fiscal QR / Data if present
         payload.fiscalInfo?.let { fiscal ->
             renderFiscalBlock(stream, fiscal)
+        }
+
+        // Standardized Pickup Code Block for Counter
+        val codeToDisplay = payload.pickupPin?.takeIf { it.isNotBlank() } ?: payload.purchaseNumber?.takeIf { it.isNotBlank() }
+        if (!codeToDisplay.isNullOrBlank()) {
+            writeRule(stream)
+            stream.write(CMD_ALIGN_CENTER)
+            stream.write(CMD_BOLD_ON)
+            writeText(stream, "CODIGO DE RETIRO\n")
+            stream.write(CMD_SIZE_DOUBLE)
+            writeText(stream, "#$codeToDisplay\n")
+            stream.write(CMD_SIZE_NORMAL)
+            writeText(stream, "Presenta este comprobante para retirar\n")
+            stream.write(CMD_BOLD_OFF)
+            writeRule(stream)
         }
 
         // Footer: ASCII Art & Thank You Branding

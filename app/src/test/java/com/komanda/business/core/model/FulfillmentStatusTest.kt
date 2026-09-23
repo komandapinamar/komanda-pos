@@ -9,21 +9,24 @@ import org.junit.Test
 class FulfillmentStatusTest {
 
     @Test
-    fun `valid transition from approved to preparing`() {
-        assertTrue(FulfillmentStatus.APPROVED.canTransitionTo(FulfillmentStatus.PREPARING))
-        assertEquals(FulfillmentStatus.PREPARING, FulfillmentStatus.APPROVED.nextStatus())
+    fun `valid transition from approved to ready directly`() {
+        assertTrue(FulfillmentStatus.APPROVED.canTransitionTo(FulfillmentStatus.READY))
+        assertEquals(FulfillmentStatus.READY, FulfillmentStatus.APPROVED.nextStatus())
+        assertEquals("Listo para entregar", FulfillmentStatus.APPROVED.nextStatusActionLabel())
     }
 
     @Test
     fun `valid transition from preparing to ready`() {
         assertTrue(FulfillmentStatus.PREPARING.canTransitionTo(FulfillmentStatus.READY))
         assertEquals(FulfillmentStatus.READY, FulfillmentStatus.PREPARING.nextStatus())
+        assertEquals("Listo para entregar", FulfillmentStatus.PREPARING.nextStatusActionLabel())
     }
 
     @Test
     fun `valid transition from ready to delivered`() {
         assertTrue(FulfillmentStatus.READY.canTransitionTo(FulfillmentStatus.DELIVERED))
         assertEquals(FulfillmentStatus.DELIVERED, FulfillmentStatus.READY.nextStatus())
+        assertEquals("Entregado", FulfillmentStatus.READY.nextStatusActionLabel())
     }
 
     @Test

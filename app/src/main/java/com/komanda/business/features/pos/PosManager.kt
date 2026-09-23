@@ -35,11 +35,17 @@ class PosManager(
     private val _items = MutableStateFlow<List<CatalogItemDto>>(emptyList())
     val items: StateFlow<List<CatalogItemDto>> = _items.asStateFlow()
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
     private val _quantities = MutableStateFlow<Map<String, Int>>(emptyMap())
     val quantities: StateFlow<Map<String, Int>> = _quantities.asStateFlow()
 
     private val _customerName = MutableStateFlow("")
     val customerName: StateFlow<String> = _customerName.asStateFlow()
+
+    private val _discountCode = MutableStateFlow("")
+    val discountCode: StateFlow<String> = _discountCode.asStateFlow()
 
     private val _notes = MutableStateFlow("")
     val notes: StateFlow<String> = _notes.asStateFlow()
@@ -48,6 +54,7 @@ class PosManager(
     val submitting: StateFlow<Boolean> = _submitting.asStateFlow()
 
     suspend fun loadCatalog() {
+        _isLoading.value = true
         try {
             val catRes = api.listCategories(tenantId)
             if (catRes.isSuccessful && catRes.body() != null) {
@@ -60,6 +67,8 @@ class PosManager(
             }
         } catch (e: Exception) {
             Log.e(tag, "Failed to load catalog", e)
+        } finally {
+            _isLoading.value = false
         }
     }
 
@@ -77,6 +86,10 @@ class PosManager(
         _customerName.value = name
     }
 
+    fun setDiscountCode(code: String) {
+        _discountCode.value = code
+    }
+
     fun setNotes(notes: String) {
         _notes.value = notes
     }
@@ -84,6 +97,7 @@ class PosManager(
     fun clearForm() {
         _quantities.value = emptyMap()
         _customerName.value = ""
+        _discountCode.value = ""
         _notes.value = ""
     }
 
@@ -93,9 +107,6 @@ class PosManager(
     suspend fun submitDirectOrder(): DirectOrderResult {
         if (selectedCount == 0) {
             return DirectOrderResult.Error("Seleccioná al menos un producto.")
-        }
-        if (_customerName.value.trim().isBlank()) {
-            return DirectOrderResult.Error("Ingresá el nombre del cliente.")
         }
 
         _submitting.value = true
@@ -110,18 +121,20 @@ class PosManager(
                 )
             }
 
-        val customerName = _customerName.value.trim()
+        val customerName = _customerName.value.trim().ifBlank { "NN" }
+        val discountCode = _discountCode.value.trim().ifBlank { null }
         val notes = _notes.value.trim().ifBlank { null }
         val body = CreateDirectOrderRequest(
             items = requestItems,
             customer = DirectOrderCustomerRequest(name = customerName),
-            notes = notes
+            notes = notes,
+            discountCode = discountCode
         )
 
         val itemsList = _quantities.value
             .filter { it.value > 0 }
             .map { it.key to it.value }
-        val cartHash = CheckoutAttemptStore.computeCartHash(itemsList, customerName, notes)
+        val cartHash = CheckoutAttemptStore.computeCartHash(itemsList, customerName, notes, discountCode)
         val attempt = attemptStore?.getOrStartAttempt(tenantId, cartHash)
         val idempotencyKey = attempt?.idempotencyKey ?: UUID.randomUUID().toString()
 

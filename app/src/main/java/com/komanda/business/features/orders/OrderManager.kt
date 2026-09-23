@@ -184,11 +184,15 @@ class OrderManager(
 
         scope.launch {
             try {
+                val pinToSend = if (targetStatus == OrderStatuses.DELIVERED) order.pickupPin else null
                 val response = api.transitionOrderStatus(
                     tenantId = tenantId,
                     orderId = order.id,
                     version = version.toString(),
-                    body = TransitionOrderRequest(fulfillmentStatus = targetStatus)
+                    body = TransitionOrderRequest(
+                        fulfillmentStatus = targetStatus,
+                        pickupPin = pinToSend
+                    )
                 )
 
                 if (response.isSuccessful && response.body() != null) {

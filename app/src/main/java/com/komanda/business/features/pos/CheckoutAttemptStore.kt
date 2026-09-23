@@ -70,10 +70,16 @@ class CheckoutAttemptStore(
     }
 
     companion object {
-        fun computeCartHash(items: List<Pair<String, Int>>, customerName: String, notes: String?): String {
+        fun computeCartHash(
+            items: List<Pair<String, Int>>,
+            customerName: String,
+            notes: String?,
+            discountCode: String? = null
+        ): String {
             val content = buildString {
                 append("customer:").append(customerName.trim()).append(";")
                 append("notes:").append(notes?.trim() ?: "").append(";")
+                append("discount:").append(discountCode?.trim()?.uppercase() ?: "").append(";")
                 items.sortedBy { it.first }.forEach { (id, qty) ->
                     append(id).append(":").append(qty).append(";")
                 }

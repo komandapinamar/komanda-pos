@@ -93,6 +93,16 @@ class EscPosTicketRendererTest {
         // ASCII art & branding
         assertTrue("Must include ASCII art cloche/food emblem", text.contains(".------.") && text.contains("| ~~~~ |"))
         assertTrue("Must include thank you message", text.contains("¡Gracias por tu compra!"))
+
+        // Standardized pickup code
+        assertTrue("Must include standardized pickup code block", text.contains("CODIGO DE RETIRO"))
+        assertTrue("Must include purchase number fallback when PIN is null", text.contains("#42"))
+
+        // With explicit PIN
+        val withPin = samplePayload.copy(pickupPin = "7428")
+        val pinBytes = EscPosTicketRenderer.renderCounterTicket(withPin)
+        val pinText = String(pinBytes, Charsets.ISO_8859_1)
+        assertTrue("Must include explicit PIN in pickup block", pinText.contains("#7428"))
     }
 
     @Test

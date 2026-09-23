@@ -10,23 +10,23 @@ enum class FulfillmentStatus(val wireValue: String) {
     fun isTerminal(): Boolean = this == DELIVERED || this == CANCELLED
 
     fun nextStatus(): FulfillmentStatus? = when (this) {
-        APPROVED -> PREPARING
+        APPROVED -> READY
         PREPARING -> READY
         READY -> DELIVERED
         DELIVERED, CANCELLED -> null
     }
 
     fun nextStatusActionLabel(): String? = when (this) {
-        APPROVED -> "Preparar"
-        PREPARING -> "Marcar Listo"
-        READY -> "Marcar Entregado"
+        APPROVED -> "Listo para entregar"
+        PREPARING -> "Listo para entregar"
+        READY -> "Entregado"
         DELIVERED, CANCELLED -> null
     }
 
     fun canTransitionTo(next: FulfillmentStatus): Boolean {
         if (this == next) return true
         return when (this) {
-            APPROVED -> next == PREPARING || next == CANCELLED
+            APPROVED -> next == READY || next == PREPARING || next == CANCELLED
             PREPARING -> next == READY || next == CANCELLED
             READY -> next == DELIVERED
             DELIVERED, CANCELLED -> false
