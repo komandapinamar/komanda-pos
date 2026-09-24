@@ -4,6 +4,7 @@ import android.util.Log
 import com.komanda.business.core.audio.OrderAnnouncer
 import com.komanda.business.core.model.AdminDashboardOrder
 import com.komanda.business.core.model.OrderStatuses
+import com.komanda.business.core.model.orderTrackingUrl
 import com.komanda.business.core.network.ConnectionState
 import com.komanda.business.core.network.KomandaApi
 import com.komanda.business.core.network.SseOrderEventListener
@@ -33,8 +34,11 @@ class OrderManager(
     private val announcer: OrderAnnouncer? = null,
     val printerRouter: PrinterRouter? = null,
     private val tenantName: String = "Komanda",
+    private val baseUrl: String = "",
     private val autoPrint: suspend (AdminDashboardOrder) -> Unit = { order ->
-        printerRouter?.handleNewOrder(order.toTicketPayload(tenantName = tenantName))
+        printerRouter?.handleNewOrder(order.toTicketPayload(tenantName = tenantName).copy(
+            trackingUrl = orderTrackingUrl(baseUrl, tenantId, order.id)
+        ))
     }
 ) {
 
@@ -223,7 +227,9 @@ class OrderManager(
 
     suspend fun printOrderTicket(order: AdminDashboardOrder, targetPrinterId: String? = null) {
         val router = printerRouter ?: return
-        val payload = order.toTicketPayload(tenantName = tenantName)
+        val payload = order.toTicketPayload(tenantName = tenantName).copy(
+            trackingUrl = orderTrackingUrl(baseUrl, tenantId, order.id)
+        )
         router.printManual(payload, targetPrinterId = targetPrinterId)
     }
 

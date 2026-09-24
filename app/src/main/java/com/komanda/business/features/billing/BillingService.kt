@@ -2,6 +2,7 @@ package com.komanda.business.features.billing
 
 import com.komanda.business.core.model.AdminDashboardOrder
 import com.komanda.business.core.model.FiscalInvoiceData
+import com.komanda.business.core.model.orderTrackingUrl
 import com.komanda.business.core.network.CreateInvoiceRequest
 import com.komanda.business.core.network.KomandaApi
 import com.komanda.business.hardware.printing.model.PrintResult
@@ -16,7 +17,8 @@ sealed class BillingResult {
 class BillingService(
     private val api: KomandaApi,
     private val printerRouter: PrinterRouter,
-    private val tenantName: String = "Komanda"
+    private val tenantName: String = "Komanda",
+    private val baseUrl: String = ""
 ) {
 
     suspend fun invoiceOrder(
@@ -56,7 +58,8 @@ class BillingService(
             )
 
             val ticketPayload = order.toTicketPayload(tenantName = tenantName, copies = 1).copy(
-                fiscalInfo = fiscalData
+                fiscalInfo = fiscalData,
+                trackingUrl = orderTrackingUrl(baseUrl, tenantId, order.id)
             )
 
             // Invoices are printed on the counter printer (or first available active printer)

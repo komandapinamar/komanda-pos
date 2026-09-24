@@ -1,5 +1,7 @@
 package com.komanda.business.core.model
 
+import java.net.URI
+
 data class TicketCustomer(
     val name: String? = null,
     val phone: String? = null,
@@ -50,5 +52,18 @@ data class TicketPayload(
     val approvedAt: String? = null,
     val items: List<TicketItem> = emptyList(),
     val summary: TicketSummary = TicketSummary(0.0, 0.0, 0.0),
-    val fiscalInfo: FiscalInvoiceData? = null
+    val fiscalInfo: FiscalInvoiceData? = null,
+    val trackingUrl: String? = null
 )
+
+fun orderTrackingUrl(baseUrl: String, tenantId: String, orderId: String): String? {
+    val uuidPattern = Regex("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}")
+    if (!uuidPattern.matches(tenantId) || !uuidPattern.matches(orderId)) return null
+    val server = try { URI(baseUrl.trim()) } catch (_: IllegalArgumentException) { return null }
+    if (!server.scheme.equals("https", ignoreCase = true) || server.host.isNullOrBlank() ||
+        server.userInfo != null || !server.path.isNullOrBlank() && server.path != "/" ||
+        server.query != null || server.fragment != null
+    ) return null
+    val origin = URI("https", null, server.host, server.port, null, null, null).toASCIIString()
+    return "$origin/orders/status/$tenantId/$orderId"
+}

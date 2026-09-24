@@ -248,7 +248,9 @@ class MainActivity : ComponentActivity() {
                                 api = api,
                                 sseListener = sseListener,
                                 announcer = announcer,
-                                printerRouter = printerRouter
+                                printerRouter = printerRouter,
+                                tenantName = session.tenantName,
+                                baseUrl = currentBaseUrl
                             ).also {
                                 activeOrderManager?.stopListening()
                                 activeOrderManager = it
@@ -273,19 +275,23 @@ class MainActivity : ComponentActivity() {
 
                         val attemptStore = remember { CheckoutAttemptStore(this@MainActivity) }
 
-                        val posMgr = remember(session.tenantId) {
+                        val posMgr = remember(session.tenantId, currentBaseUrl) {
                             PosManager(
                                 tenantId = session.tenantId,
                                 api = api,
                                 printerRouter = printerRouter,
+                                tenantName = session.tenantName,
+                                baseUrl = currentBaseUrl,
                                 attemptStore = attemptStore
                             ).also { activePosManager = it }
                         }
 
-                        val billingSvc = remember(session.tenantId) {
+                        val billingSvc = remember(session.tenantId, currentBaseUrl) {
                             BillingService(
                                 api = api,
-                                printerRouter = printerRouter
+                                printerRouter = printerRouter,
+                                tenantName = session.tenantName,
+                                baseUrl = currentBaseUrl
                             ).also { activeBillingService = it }
                         }
 

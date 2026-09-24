@@ -5,6 +5,8 @@ import com.komanda.business.core.model.TicketItem
 import com.komanda.business.core.model.TicketItemOption
 import com.komanda.business.core.model.TicketPayload
 import com.komanda.business.core.model.TicketSummary
+import com.komanda.business.core.model.FiscalInvoiceData
+import com.komanda.business.core.model.orderTrackingUrl
 import com.komanda.business.hardware.printing.renderer.EscPosTicketRenderer
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -74,7 +76,7 @@ class EscPosTicketRendererTest {
     }
 
     @Test
-    fun `renderCounterTicket outputs commercial receipt with prices totals and ASCII art`() {
+    fun `renderCounterTicket outputs commercial receipt with prices totals and thank you text`() {
         val bytes = EscPosTicketRenderer.renderCounterTicket(samplePayload)
         val text = String(bytes, Charsets.ISO_8859_1)
 
@@ -105,17 +107,46 @@ class EscPosTicketRendererTest {
     }
 
     @Test
-    fun `renderEspressoCashTicket outputs prominent cash payment notice`() {
-        val bytes = EscPosTicketRenderer.renderEspressoCashTicket(samplePayload)
-        val text = String(bytes, Charsets.ISO_8859_1)
+    fun `Refill counter ticket prints bolt logo and encoded status URL only for counter`() {
+        val url = "https://komanda.example/orders/status/1c5fb634-425c-4a7e-830e-1392d2e3d0ae/62d47dd7-d84d-4313-87f1-d0e72dfafafe"
+        val refill = samplePayload.copy(tenant = " rEfIlL ", trackingUrl = url)
+        val counter = String(EscPosTicketRenderer.renderCounterTicket(refill), Charsets.ISO_8859_1)
+        assertTrue(counter.contains("| |   __/  _/"))
+        assertTrue(counter.contains("Segui tu pedido:"))
+        assertTrue(counter.contains(url)) // QR store-data command carries the UTF-8 URL.
+        assertTrue(counter.contains("¡Gracias por tu compra!"))
+        assertTrue(counter.lines().filter { it.contains("| |") }.all { it.length <= 32 })
 
-        assertTrue("Must include KOMANDA header", text.contains("KOMANDA"))
-        assertTrue("Must include AUTOSERVICIO EXPRESS subtitle", text.contains("AUTOSERVICIO EXPRESS"))
-        assertTrue("Must include items", text.contains("2 x Pizza Especial"))
-        assertTrue("Must include total to pay", text.contains("TOTAL A PAGAR: $9.500"))
-        assertTrue("Must include attention notice", text.contains("*** ATENCION ***"))
-        assertTrue("Must include cash instruction", text.contains("ACERCARSE A CAJA"))
-        assertTrue("Must include cash instruction line 2", text.contains("A REALIZAR EL PAGO"))
-        assertTrue("Must include cash instruction line 3", text.contains("EN EFECTIVO"))
+        val kitchen = String(EscPosTicketRenderer.renderKitchenTicket(refill), Charsets.ISO_8859_1)
+        assertFalse(kitchen.contains(url))
+        assertFalse(kitchen.contains("| |   __/  _/"))
+
+        val other = String(EscPosTicketRenderer.renderCounterTicket(refill.copy(tenant = "Otro")), Charsets.ISO_8859_1)
+        assertFalse(other.contains("| |   __/  _/"))
+        val test = String(EscPosTicketRenderer.renderCounterTicket(samplePayload), Charsets.ISO_8859_1)
+        assertFalse(test.contains("Segui tu pedido:"))
+    }
+
+    @Test
+    fun `tracking URL requires real UUIDs and HTTPS server`() {
+        val tenant = "1c5fb634-425c-4a7e-830e-1392d2e3d0ae"
+        val order = "62d47dd7-d84d-4313-87f1-d0e72dfafafe"
+        assertEquals("https://komanda.example/orders/status/$tenant/$order", orderTrackingUrl("https://komanda.example/", tenant, order))
+        assertEquals(null, orderTrackingUrl("http://komanda.example", tenant, order))
+        assertEquals(null, orderTrackingUrl("https://komanda.example/private", tenant, order))
+        assertEquals(null, orderTrackingUrl("https://komanda.example", tenant, "test-check"))
+    }
+
+    @Test
+    fun `counter ticket keeps fiscal QR alongside tracking QR`() {
+        val tracking = "https://komanda.example/orders/status/1c5fb634-425c-4a7e-830e-1392d2e3d0ae/62d47dd7-d84d-4313-87f1-d0e72dfafafe"
+        val fiscal = "https://www.afip.gob.ar/fe/qr/?p=test"
+        val payload = samplePayload.copy(
+            trackingUrl = tracking,
+            fiscalInfo = FiscalInvoiceData("B", 1, 7L, "1234", "2026-09-23", fiscal)
+        )
+        val text = String(EscPosTicketRenderer.renderCounterTicket(payload), Charsets.ISO_8859_1)
+        assertTrue(text.contains(fiscal))
+        assertTrue(text.contains(tracking))
     }
 }

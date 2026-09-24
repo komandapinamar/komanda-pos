@@ -2,6 +2,7 @@ package com.komanda.business.features.pos
 
 import android.util.Log
 import com.komanda.business.core.model.AdminDashboardOrder
+import com.komanda.business.core.model.orderTrackingUrl
 import com.komanda.business.core.network.CatalogCategoryDto
 import com.komanda.business.core.network.CatalogItemDto
 import com.komanda.business.core.network.CreateDirectOrderRequest
@@ -24,6 +25,7 @@ class PosManager(
     private val api: KomandaApi,
     private val printerRouter: PrinterRouter? = null,
     private val tenantName: String = "Komanda",
+    private val baseUrl: String = "",
     private val attemptStore: CheckoutAttemptStore? = null
 ) {
 
@@ -161,7 +163,9 @@ class PosManager(
             // Dispatches automatic printing according to configured printer triggers
             printerRouter?.let { router ->
                 try {
-                    val ticketPayload = order.toTicketPayload(tenantName = tenantName)
+                    val ticketPayload = order.toTicketPayload(tenantName = tenantName).copy(
+                        trackingUrl = orderTrackingUrl(baseUrl, tenantId, order.id)
+                    )
                     router.handleDirectPosOrder(ticketPayload)
                 } catch (e: Exception) {
                     Log.e(tag, "Print error after creating direct order", e)

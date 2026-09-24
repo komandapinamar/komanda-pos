@@ -122,22 +122,6 @@ class PrinterRouter(
     }
 
     /**
-     * Prints an Espresso self-service cash ticket with prominent payment notice.
-     */
-    suspend fun printEspressoCashTicket(payload: TicketPayload): Map<String, PrintResult> = withContext(Dispatchers.IO) {
-        val targets = printers.value.filter { it.role != PrinterRole.DISABLED }
-        val results = mutableMapOf<String, PrintResult>()
-        val bytes = EscPosTicketRenderer.renderEspressoCashTicket(payload)
-        for (config in targets) {
-            val driver = getDriverForConfig(config)
-            val res = driver.printRaw(bytes)
-            results[config.id] = res
-            Log.i(tag, "Espresso cash ticket printed on '${config.name}': $res")
-        }
-        results
-    }
-
-    /**
      * Prints a diagnostic test ticket on a given printer profile.
      */
     suspend fun printTestTicket(config: PrinterConfig): PrintResult = withContext(Dispatchers.IO) {
