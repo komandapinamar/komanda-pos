@@ -55,6 +55,7 @@ data class AdminDashboardOrder(
     val discountTotal: String = "0.00",
     val total: String = "0.00",
     val currency: String = "ARS",
+    val pickupPin: String? = null,
     val approvedAt: String? = null,
     val deliveredAt: String? = null,
     val createdAt: String,
@@ -66,6 +67,7 @@ data class AdminDashboardOrder(
         return TicketPayload(
             orderId = id,
             purchaseNumber = purchaseNumber,
+            pickupPin = pickupPin,
             source = source ?: "admin_direct",
             copies = resolvedCopies,
             tenant = tenantName,
@@ -114,9 +116,8 @@ data class AdminDashboardOrder(
 
         fun statusLabel(status: OrderStatus): String {
             return when (status) {
-                OrderStatuses.APPROVED -> "Aprobado"
-                OrderStatuses.PREPARING -> "En preparación"
-                OrderStatuses.READY -> "Listo"
+                OrderStatuses.APPROVED, OrderStatuses.PREPARING -> "Preparando"
+                OrderStatuses.READY -> "Listo para entregar"
                 OrderStatuses.DELIVERED -> "Entregado"
                 OrderStatuses.CANCELLED -> "Cancelado"
                 else -> status
@@ -125,7 +126,7 @@ data class AdminDashboardOrder(
 
         fun nextStatus(status: OrderStatus): OrderStatus? {
             return when (status) {
-                OrderStatuses.APPROVED -> OrderStatuses.PREPARING
+                OrderStatuses.APPROVED -> OrderStatuses.READY
                 OrderStatuses.PREPARING -> OrderStatuses.READY
                 OrderStatuses.READY -> OrderStatuses.DELIVERED
                 else -> null
@@ -134,9 +135,8 @@ data class AdminDashboardOrder(
 
         fun nextStatusLabel(status: OrderStatus): String? {
             return when (nextStatus(status)) {
-                OrderStatuses.PREPARING -> "Preparar"
-                OrderStatuses.READY -> "Marcar listo"
-                OrderStatuses.DELIVERED -> "Marcar entregado"
+                OrderStatuses.READY -> "Listo para entregar"
+                OrderStatuses.DELIVERED -> "Entregado"
                 else -> null
             }
         }

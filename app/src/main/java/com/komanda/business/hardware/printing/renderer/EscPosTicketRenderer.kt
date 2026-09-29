@@ -62,7 +62,7 @@ object EscPosTicketRenderer {
     /**
      * Counter / Customer Ticket Template:
      * Full commercial receipt with itemized prices, totals, payment status, optional fiscal block,
-     * and a friendly ASCII art emblem with thank-you branding.
+     * and tenant-specific branding with thank-you text.
      */
     fun renderCounterTicket(payload: TicketPayload): ByteArray {
         val stream = ByteArrayOutputStream()
@@ -70,49 +70,6 @@ object EscPosTicketRenderer {
         for (i in 0 until copies) {
             renderCounterCopy(stream, payload, i, copies)
         }
-        return stream.toByteArray()
-    }
-
-    /**
-     * Komanda Espresso Cash Ticket Template:
-     * High-visibility receipt for self-service totems featuring the prominent notice:
-     * "*** ATENCION *** ACERCARSE A CAJA A REALIZAR EL PAGO EN EFECTIVO"
-     */
-    fun renderEspressoCashTicket(payload: TicketPayload): ByteArray {
-        val stream = ByteArrayOutputStream()
-        renderSharedHeader(stream, payload, subtitle = "AUTOSERVICIO EXPRESS")
-
-        writeRule(stream)
-        stream.write(CMD_ALIGN_LEFT)
-        stream.write(CMD_BOLD_ON)
-        writeText(stream, "PRODUCTOS\n")
-        stream.write(CMD_BOLD_OFF)
-
-        for (item in payload.items) {
-            writeWrapped(stream, "${item.quantity} x ${item.name}")
-            writeText(stream, "    ${formatMoney(item.lineTotal, payload.currency)}\n")
-        }
-
-        writeRule(stream)
-        stream.write(CMD_BOLD_ON)
-        writeText(stream, "TOTAL A PAGAR: ${formatMoney(payload.summary.total, payload.currency)}\n")
-        stream.write(CMD_BOLD_OFF)
-        writeRule(stream)
-
-        stream.write(CMD_ALIGN_CENTER)
-        stream.write(CMD_SIZE_DOUBLE)
-        stream.write(CMD_BOLD_ON)
-        writeText(stream, "*** ATENCION ***\n")
-        writeText(stream, "ACERCARSE A CAJA\n")
-        writeText(stream, "A REALIZAR EL PAGO\n")
-        writeText(stream, "EN EFECTIVO\n")
-        stream.write(CMD_BOLD_OFF)
-        stream.write(CMD_SIZE_NORMAL)
-        writeRule(stream)
-
-        writeText(stream, "\n\n\n")
-        stream.write(CMD_FEED_AND_CUT)
-
         return stream.toByteArray()
     }
 
@@ -139,6 +96,10 @@ object EscPosTicketRenderer {
             writeText(stream, "Compra #$purchaseNumber\n")
         } else {
             writeText(stream, "Orden #${payload.orderId}\n")
+        }
+
+        payload.pickupPin?.takeIf { it.isNotBlank() }?.let { pin ->
+            writeText(stream, "PIN Retiro: #$pin\n")
         }
 
         stream.write(CMD_BOLD_OFF)
@@ -275,21 +236,55 @@ object EscPosTicketRenderer {
             renderFiscalBlock(stream, fiscal)
         }
 
-        // Footer: ASCII Art & Thank You Branding
-        renderCounterFooter(stream)
+        // Standardized Pickup Code Block for Counter
+        val codeToDisplay = payload.pickupPin?.takeIf { it.isNotBlank() } ?: payload.purchaseNumber?.takeIf { it.isNotBlank() }
+        if (!codeToDisplay.isNullOrBlank()) {
+            writeRule(stream)
+            stream.write(CMD_ALIGN_CENTER)
+            stream.write(CMD_BOLD_ON)
+            writeText(stream, "CODIGO DE RETIRO\n")
+            stream.write(CMD_SIZE_DOUBLE)
+            writeText(stream, "#$codeToDisplay\n")
+            stream.write(CMD_SIZE_NORMAL)
+            writeText(stream, "Presenta este comprobante para retirar\n")
+            stream.write(CMD_BOLD_OFF)
+            writeRule(stream)
+        }
+
+        payload.trackingUrl?.takeIf { it.startsWith("https://") }?.let { url ->
+            stream.write(CMD_ALIGN_CENTER)
+            writeText(stream, "Segui tu pedido:\n")
+            writeQrCode(stream, url)
+        }
+
+        renderCounterFooter(stream, payload.tenant)
 
         // Feed & Cut
         writeText(stream, "\n\n\n")
         stream.write(CMD_FEED_AND_CUT)
     }
 
-    private fun renderCounterFooter(stream: ByteArrayOutputStream) {
+    private fun renderCounterFooter(stream: ByteArrayOutputStream, tenantName: String) {
         stream.write(CMD_ALIGN_CENTER)
-        writeText(stream, "   ( (\n")
-        writeText(stream, "    ) )\n")
-        writeText(stream, " .------.\n")
-        writeText(stream, " | ~~~~ |\n")
-        writeText(stream, "  '----'\n")
+        if (tenantName.trim().equals("Refill", ignoreCase = true)) {
+            // Monochrome 32-column approximation of Refill's R crossed by a bolt.
+            val refillLogo = listOf(
+                "   ___________",
+                "  /  _____   \\",
+                " /  /     \\   \\",
+                "/  /       |  |",
+                "| |      _/  /",
+                "| |   __/  _/",
+                "| |  /  __/",
+                "| | /  /    /\\",
+                "| |/  /    / /",
+                "|    /____/ /",
+                "|  /\\____  /",
+                "| /      \\/",
+                "\\_/"
+            )
+            refillLogo.forEach { writeText(stream, "$it\n") }
+        }
         stream.write(CMD_BOLD_ON)
         writeText(stream, "¡Gracias por tu compra!\n")
         stream.write(CMD_BOLD_OFF)

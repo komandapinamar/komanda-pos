@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -24,6 +25,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.komanda.business.core.audio.OrderAnnouncer
 import com.komanda.business.core.auth.AuthManager
 import com.komanda.business.core.auth.AuthState
@@ -33,10 +36,12 @@ import com.komanda.business.core.auth.ui.NoActiveTenantScreen
 import com.komanda.business.core.auth.ui.TenantSelectionScreen
 import com.komanda.business.core.network.KomandaApi
 import com.komanda.business.core.network.NetworkClient
+import com.komanda.business.core.network.SharedPreferencesSseCursorStorage
 import com.komanda.business.core.network.SseOrderEventListener
 import com.komanda.business.features.billing.BillingService
 import com.komanda.business.features.orders.OrderManager
 import com.komanda.business.features.orders.ui.OrdersDashboardScreen
+import com.komanda.business.features.pos.CheckoutAttemptStore
 import com.komanda.business.features.pos.PosManager
 import com.komanda.business.features.pos.ui.PosScreen
 import com.komanda.business.features.settings.ui.PrinterSettingsScreen
@@ -235,33 +240,58 @@ class MainActivity : ComponentActivity() {
                             val sseListener = SseOrderEventListener(
                                 baseUrl = currentBaseUrl,
                                 tenantId = session.tenantId,
-                                authToken = session.token
+                                authToken = session.token,
+                                cursorStorage = SharedPreferencesSseCursorStorage(this@MainActivity)
                             )
                             OrderManager(
                                 tenantId = session.tenantId,
                                 api = api,
                                 sseListener = sseListener,
                                 announcer = announcer,
-                                printerRouter = printerRouter
+                                printerRouter = printerRouter,
+                                tenantName = session.tenantName,
+                                baseUrl = currentBaseUrl
                             ).also {
                                 activeOrderManager?.stopListening()
                                 activeOrderManager = it
-                                it.startListening()
                             }
                         }
 
-                        val posMgr = remember(session.tenantId) {
+                        DisposableEffect(orderMgr) {
+                            val observer = LifecycleEventObserver { _, event ->
+                                when (event) {
+                                    Lifecycle.Event.ON_START -> orderMgr.startListening()
+                                    Lifecycle.Event.ON_STOP -> orderMgr.stopListening()
+                                    else -> Unit
+                                }
+                            }
+                            lifecycle.addObserver(observer)
+                            if (lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)) orderMgr.startListening()
+                            onDispose {
+                                lifecycle.removeObserver(observer)
+                                orderMgr.stopListening()
+                            }
+                        }
+
+                        val attemptStore = remember { CheckoutAttemptStore(this@MainActivity) }
+
+                        val posMgr = remember(session.tenantId, currentBaseUrl) {
                             PosManager(
                                 tenantId = session.tenantId,
                                 api = api,
-                                printerRouter = printerRouter
+                                printerRouter = printerRouter,
+                                tenantName = session.tenantName,
+                                baseUrl = currentBaseUrl,
+                                attemptStore = attemptStore
                             ).also { activePosManager = it }
                         }
 
-                        val billingSvc = remember(session.tenantId) {
+                        val billingSvc = remember(session.tenantId, currentBaseUrl) {
                             BillingService(
                                 api = api,
-                                printerRouter = printerRouter
+                                printerRouter = printerRouter,
+                                tenantName = session.tenantName,
+                                baseUrl = currentBaseUrl
                             ).also { activeBillingService = it }
                         }
 
