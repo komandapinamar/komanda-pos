@@ -1,7 +1,10 @@
 package com.komanda.business.hardware.printing
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.util.Log
+import com.komanda.business.R
 import com.komanda.business.core.model.TicketCustomer
 import com.komanda.business.core.model.TicketItem
 import com.komanda.business.core.model.TicketPayload
@@ -97,6 +100,18 @@ class PrinterRouter(
         dispatchToPrinters(payload, unprintedTargets, eventDesc = "DIRECT_POS_ORDER")
     }
 
+    private fun getHeaderLogoForPayload(payload: TicketPayload): Bitmap? {
+        if (payload.tenant.trim().equals("Refill", ignoreCase = true)) {
+            return try {
+                BitmapFactory.decodeResource(context.resources, R.drawable.logo_refill_large)
+            } catch (e: Exception) {
+                Log.w(tag, "Failed to load logo_refill_large drawable", e)
+                null
+            }
+        }
+        return null
+    }
+
     /**
      * Manually prints a ticket on a specific target printer (or all active printers if "ALL" or null).
      */
@@ -110,10 +125,15 @@ class PrinterRouter(
             printers.value.filter { it.id == targetPrinterId && it.role != PrinterRole.DISABLED }
         }
 
+        val headerLogo = getHeaderLogoForPayload(payload)
         val results = mutableMapOf<String, PrintResult>()
         for (config in targets) {
             val driver = getDriverForConfig(config)
-            val bytes = EscPosTicketRenderer.renderTicket(payload.copy(copies = config.copies), config.role)
+            val bytes = EscPosTicketRenderer.renderTicket(
+                payload = payload.copy(copies = config.copies),
+                role = config.role,
+                headerLogoBitmap = headerLogo
+            )
             val res = driver.printRaw(bytes)
             results[config.id] = res
             Log.i(tag, "Manual print on '${config.name}' (${config.role}): $res")
@@ -130,7 +150,7 @@ class PrinterRouter(
             purchaseNumber = "TEST",
             source = "pos_test",
             copies = 1,
-            tenant = "Komanda Demo",
+            tenant = "Refill",
             customer = TicketCustomer(name = "Prueba de Impresión"),
             items = listOf(
                 TicketItem(
@@ -145,7 +165,12 @@ class PrinterRouter(
         )
 
         val driver = getDriverForConfig(config)
-        val bytes = EscPosTicketRenderer.renderTicket(testPayload, config.role)
+        val headerLogo = getHeaderLogoForPayload(testPayload)
+        val bytes = EscPosTicketRenderer.renderTicket(
+            payload = testPayload,
+            role = config.role,
+            headerLogoBitmap = headerLogo
+        )
         driver.printRaw(bytes)
     }
 
@@ -159,11 +184,16 @@ class PrinterRouter(
             return
         }
 
+        val headerLogo = getHeaderLogoForPayload(payload)
         for (config in targets) {
             val destination = "${config.id}_${config.role}"
             try {
                 val driver = getDriverForConfig(config)
-                val bytes = EscPosTicketRenderer.renderTicket(payload.copy(copies = config.copies), config.role)
+                val bytes = EscPosTicketRenderer.renderTicket(
+                    payload = payload.copy(copies = config.copies),
+                    role = config.role,
+                    headerLogoBitmap = headerLogo
+                )
                 val result = driver.printRaw(bytes)
                 if (result is PrintResult.Success) {
                     journalStore.recordStatus(

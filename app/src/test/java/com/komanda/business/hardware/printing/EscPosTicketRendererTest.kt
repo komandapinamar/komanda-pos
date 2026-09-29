@@ -107,22 +107,17 @@ class EscPosTicketRendererTest {
     }
 
     @Test
-    fun `Refill counter ticket prints bolt logo and encoded status URL only for counter`() {
+    fun `Refill counter ticket prints thank you and encoded status URL only for counter`() {
         val url = "https://komanda.example/orders/status/1c5fb634-425c-4a7e-830e-1392d2e3d0ae/62d47dd7-d84d-4313-87f1-d0e72dfafafe"
         val refill = samplePayload.copy(tenant = " rEfIlL ", trackingUrl = url)
         val counter = String(EscPosTicketRenderer.renderCounterTicket(refill), Charsets.ISO_8859_1)
-        assertTrue(counter.contains("| |   __/  _/"))
         assertTrue(counter.contains("Segui tu pedido:"))
         assertTrue(counter.contains(url)) // QR store-data command carries the UTF-8 URL.
         assertTrue(counter.contains("¡Gracias por tu compra!"))
-        assertTrue(counter.lines().filter { it.contains("| |") }.all { it.length <= 32 })
 
         val kitchen = String(EscPosTicketRenderer.renderKitchenTicket(refill), Charsets.ISO_8859_1)
         assertFalse(kitchen.contains(url))
-        assertFalse(kitchen.contains("| |   __/  _/"))
 
-        val other = String(EscPosTicketRenderer.renderCounterTicket(refill.copy(tenant = "Otro")), Charsets.ISO_8859_1)
-        assertFalse(other.contains("| |   __/  _/"))
         val test = String(EscPosTicketRenderer.renderCounterTicket(samplePayload), Charsets.ISO_8859_1)
         assertFalse(test.contains("Segui tu pedido:"))
     }
