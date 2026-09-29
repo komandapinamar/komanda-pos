@@ -1,5 +1,6 @@
 package com.komanda.business.hardware.printing.renderer
 
+import android.graphics.Bitmap
 import com.komanda.business.core.model.FiscalInvoiceData
 import com.komanda.business.core.model.TicketPayload
 import com.komanda.business.hardware.printing.enums.PrinterRole
@@ -34,15 +35,28 @@ object EscPosTicketRenderer {
 
     /**
      * Renders a ticket tailored to the specified printer role.
+     * Optionally accepts a [logoBitmap] to print a custom raster logo at the bottom.
      */
-    fun renderTicket(payload: TicketPayload, role: PrinterRole = PrinterRole.COUNTER): ByteArray {
+    fun renderTicket(
+        payload: TicketPayload,
+        role: PrinterRole = PrinterRole.COUNTER,
+        logoBitmap: Bitmap? = null,
+        headerLogoBitmap: Bitmap? = null
+    ): ByteArray {
         val stream = ByteArrayOutputStream()
         val copies = if (payload.copies > 0) payload.copies else 1
 
         for (copyIndex in 0 until copies) {
             when (role) {
-                PrinterRole.KITCHEN -> renderKitchenCopy(stream, payload)
-                PrinterRole.COUNTER, PrinterRole.DISABLED -> renderCounterCopy(stream, payload, copyIndex, copies)
+                PrinterRole.KITCHEN -> renderKitchenCopy(stream, payload, headerLogoBitmap)
+                PrinterRole.COUNTER, PrinterRole.DISABLED -> renderCounterCopy(
+                    stream,
+                    payload,
+                    copyIndex,
+                    copies,
+                    logoBitmap,
+                    headerLogoBitmap
+                )
             }
         }
 
@@ -53,70 +67,39 @@ object EscPosTicketRenderer {
      * Kitchen Ticket Template:
      * Focuses 100% on preparation. Strictly omits prices, totals, and database internal UUIDs.
      */
-    fun renderKitchenTicket(payload: TicketPayload): ByteArray {
+    fun renderKitchenTicket(
+        payload: TicketPayload,
+        headerLogoBitmap: Bitmap? = null
+    ): ByteArray {
         val stream = ByteArrayOutputStream()
-        renderKitchenCopy(stream, payload)
+        renderKitchenCopy(stream, payload, headerLogoBitmap)
         return stream.toByteArray()
     }
 
     /**
      * Counter / Customer Ticket Template:
      * Full commercial receipt with itemized prices, totals, payment status, optional fiscal block,
-     * and a friendly ASCII art emblem with thank-you branding.
+     * and tenant-specific branding with thank-you text.
      */
-    fun renderCounterTicket(payload: TicketPayload): ByteArray {
+    fun renderCounterTicket(
+        payload: TicketPayload,
+        logoBitmap: Bitmap? = null,
+        headerLogoBitmap: Bitmap? = null
+    ): ByteArray {
         val stream = ByteArrayOutputStream()
         val copies = if (payload.copies > 0) payload.copies else 1
         for (i in 0 until copies) {
-            renderCounterCopy(stream, payload, i, copies)
+            renderCounterCopy(stream, payload, i, copies, logoBitmap, headerLogoBitmap)
         }
         return stream.toByteArray()
     }
 
-    /**
-     * Komanda Espresso Cash Ticket Template:
-     * High-visibility receipt for self-service totems featuring the prominent notice:
-     * "*** ATENCION *** ACERCARSE A CAJA A REALIZAR EL PAGO EN EFECTIVO"
-     */
-    fun renderEspressoCashTicket(payload: TicketPayload): ByteArray {
-        val stream = ByteArrayOutputStream()
-        renderSharedHeader(stream, payload, subtitle = "AUTOSERVICIO EXPRESS")
-
-        writeRule(stream)
-        stream.write(CMD_ALIGN_LEFT)
-        stream.write(CMD_BOLD_ON)
-        writeText(stream, "PRODUCTOS\n")
-        stream.write(CMD_BOLD_OFF)
-
-        for (item in payload.items) {
-            writeWrapped(stream, "${item.quantity} x ${item.name}")
-            writeText(stream, "    ${formatMoney(item.lineTotal, payload.currency)}\n")
-        }
-
-        writeRule(stream)
-        stream.write(CMD_BOLD_ON)
-        writeText(stream, "TOTAL A PAGAR: ${formatMoney(payload.summary.total, payload.currency)}\n")
-        stream.write(CMD_BOLD_OFF)
-        writeRule(stream)
-
-        stream.write(CMD_ALIGN_CENTER)
-        stream.write(CMD_SIZE_DOUBLE)
-        stream.write(CMD_BOLD_ON)
-        writeText(stream, "*** ATENCION ***\n")
-        writeText(stream, "ACERCARSE A CAJA\n")
-        writeText(stream, "A REALIZAR EL PAGO\n")
-        writeText(stream, "EN EFECTIVO\n")
-        stream.write(CMD_BOLD_OFF)
-        stream.write(CMD_SIZE_NORMAL)
-        writeRule(stream)
-
-        writeText(stream, "\n\n\n")
-        stream.write(CMD_FEED_AND_CUT)
-
-        return stream.toByteArray()
-    }
-
-    private fun renderSharedHeader(stream: ByteArrayOutputStream, payload: TicketPayload, subtitle: String? = null) {
+    private fun renderSharedHeader(
+        stream: ByteArrayOutputStream,
+        payload: TicketPayload,
+        subtitle: String? = null,
+        headerLogoBitmap: Bitmap? = null
+    ) {
         stream.write(CMD_INIT)
         stream.write(CMD_ALIGN_CENTER)
 
@@ -125,10 +108,14 @@ object EscPosTicketRenderer {
         stream.write(CMD_BOLD_ON)
         writeText(stream, "KOMANDA\n")
 
-        // 2. Subtitle: Restaurant Name
+        // 2. Subtitle: Restaurant Name or Header Logo
         stream.write(CMD_SIZE_NORMAL)
         stream.write(CMD_BOLD_ON)
-        writeText(stream, "${payload.tenant.uppercase()}\n")
+        if (headerLogoBitmap != null) {
+            writeBitmap(stream, headerLogoBitmap)
+        } else {
+            writeText(stream, "${payload.tenant.uppercase()}\n")
+        }
 
         subtitle?.let {
             writeText(stream, "$it\n")
@@ -141,13 +128,21 @@ object EscPosTicketRenderer {
             writeText(stream, "Orden #${payload.orderId}\n")
         }
 
+        payload.pickupPin?.takeIf { it.isNotBlank() }?.let { pin ->
+            writeText(stream, "PIN Retiro: #$pin\n")
+        }
+
         stream.write(CMD_BOLD_OFF)
         writeText(stream, "${formatTimestamp(payload.approvedAt)}\n")
         writeRule(stream)
     }
 
-    private fun renderKitchenCopy(stream: ByteArrayOutputStream, payload: TicketPayload) {
-        renderSharedHeader(stream, payload, subtitle = "--- COCINA ---")
+    private fun renderKitchenCopy(
+        stream: ByteArrayOutputStream,
+        payload: TicketPayload,
+        headerLogoBitmap: Bitmap? = null
+    ) {
+        renderSharedHeader(stream, payload, subtitle = "--- COCINA ---", headerLogoBitmap = headerLogoBitmap)
 
         // Customer Info
         stream.write(CMD_ALIGN_LEFT)
@@ -193,7 +188,6 @@ object EscPosTicketRenderer {
 
         // Summary: Physical units only
         writeRule(stream)
-        writeText(stream, "Lineas: ${payload.items.size}\n")
         writeText(stream, "Total unidades: $totalUnits\n")
 
         // Feed & Cut
@@ -205,10 +199,12 @@ object EscPosTicketRenderer {
         stream: ByteArrayOutputStream,
         payload: TicketPayload,
         copyIndex: Int,
-        totalCopies: Int
+        totalCopies: Int,
+        logoBitmap: Bitmap? = null,
+        headerLogoBitmap: Bitmap? = null
     ) {
         val copyLabel = if (totalCopies > 1) "COPIA ${copyIndex + 1}/$totalCopies" else null
-        renderSharedHeader(stream, payload, subtitle = copyLabel)
+        renderSharedHeader(stream, payload, subtitle = copyLabel, headerLogoBitmap = headerLogoBitmap)
 
         // Customer Info
         stream.write(CMD_ALIGN_LEFT)
@@ -256,7 +252,6 @@ object EscPosTicketRenderer {
 
         // Financial Summary
         writeRule(stream)
-        writeText(stream, "Lineas: ${payload.items.size}\n")
         writeText(stream, "Unidades: $totalUnits\n")
 
         if (payload.summary.discountTotal > 0) {
@@ -275,7 +270,27 @@ object EscPosTicketRenderer {
             renderFiscalBlock(stream, fiscal)
         }
 
-        // Footer: ASCII Art & Thank You Branding
+        // Standardized Pickup Code Block for Counter
+        val codeToDisplay = payload.pickupPin?.takeIf { it.isNotBlank() } ?: payload.purchaseNumber?.takeIf { it.isNotBlank() }
+        if (!codeToDisplay.isNullOrBlank()) {
+            writeRule(stream)
+            stream.write(CMD_ALIGN_CENTER)
+            stream.write(CMD_BOLD_ON)
+            writeText(stream, "CODIGO DE RETIRO\n")
+            stream.write(CMD_SIZE_DOUBLE)
+            writeText(stream, "#$codeToDisplay\n")
+            stream.write(CMD_SIZE_NORMAL)
+            writeText(stream, "Presenta este comprobante para retirar\n")
+            stream.write(CMD_BOLD_OFF)
+            writeRule(stream)
+        }
+
+        payload.trackingUrl?.takeIf { it.startsWith("https://") }?.let { url ->
+            stream.write(CMD_ALIGN_CENTER)
+            writeText(stream, "Segui tu pedido:\n")
+            writeQrCode(stream, url)
+        }
+
         renderCounterFooter(stream)
 
         // Feed & Cut
@@ -285,14 +300,77 @@ object EscPosTicketRenderer {
 
     private fun renderCounterFooter(stream: ByteArrayOutputStream) {
         stream.write(CMD_ALIGN_CENTER)
-        writeText(stream, "   ( (\n")
-        writeText(stream, "    ) )\n")
-        writeText(stream, " .------.\n")
-        writeText(stream, " | ~~~~ |\n")
-        writeText(stream, "  '----'\n")
         stream.write(CMD_BOLD_ON)
         writeText(stream, "¡Gracias por tu compra!\n")
         stream.write(CMD_BOLD_OFF)
+    }
+
+    /**
+     * Converts an Android [Bitmap] to ESC/POS raster bit image command (GS v 0) and writes it to [stream].
+     *
+     * @param stream Target output byte stream
+     * @param bitmap Input bitmap image
+     * @param maxWidthDots Maximum width in printer dots/pixels (default 384 for 58mm printer at 203 DPI)
+     */
+    fun writeBitmap(
+        stream: ByteArrayOutputStream,
+        bitmap: Bitmap,
+        maxWidthDots: Int = 384
+    ) {
+        val scaledBitmap = if (bitmap.width > maxWidthDots) {
+            val aspectRatio = bitmap.height.toFloat() / bitmap.width.toFloat()
+            val targetHeight = (maxWidthDots * aspectRatio).toInt().coerceAtLeast(1)
+            Bitmap.createScaledBitmap(bitmap, maxWidthDots, targetHeight, true)
+        } else {
+            bitmap
+        }
+
+        val width = scaledBitmap.width
+        val height = scaledBitmap.height
+        val widthBytes = (width + 7) / 8
+
+        stream.write(CMD_ALIGN_CENTER)
+        // GS v 0 0 xL xH yL yH
+        stream.write(
+            byteArrayOf(
+                0x1D, 0x76, 0x30, 0x00,
+                (widthBytes and 0xFF).toByte(),
+                ((widthBytes shr 8) and 0xFF).toByte(),
+                (height and 0xFF).toByte(),
+                ((height shr 8) and 0xFF).toByte()
+            )
+        )
+
+        val imageBytes = ByteArray(widthBytes * height)
+        var byteIdx = 0
+
+        for (y in 0 until height) {
+            for (xByte in 0 until widthBytes) {
+                var accumulator = 0
+                for (bit in 0 until 8) {
+                    val x = xByte * 8 + bit
+                    if (x < width) {
+                        val pixel = scaledBitmap.getPixel(x, y)
+                        val alpha = (pixel shr 24) and 0xFF
+                        val red = (pixel shr 16) and 0xFF
+                        val green = (pixel shr 8) and 0xFF
+                        val blue = pixel and 0xFF
+
+                        // Print black dot if pixel is visible and dark enough (luminance < 128)
+                        if (alpha > 128) {
+                            val luminance = (0.299 * red + 0.587 * green + 0.114 * blue).toInt()
+                            if (luminance < 128) {
+                                accumulator = accumulator or (0x80 shr bit)
+                            }
+                        }
+                    }
+                }
+                imageBytes[byteIdx++] = accumulator.toByte()
+            }
+        }
+
+        stream.write(imageBytes)
+        stream.write(byteArrayOf(0x0A))
     }
 
     private fun renderFiscalBlock(stream: ByteArrayOutputStream, fiscal: FiscalInvoiceData) {
@@ -319,8 +397,8 @@ object EscPosTicketRenderer {
 
         // 1. Model type (Model 2)
         stream.write(byteArrayOf(0x1D, 0x28, 0x6B, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00))
-        // 2. Module size (4 dots)
-        stream.write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x04))
+        // 2. Module size (6 dots for prominent, easy-to-scan QR)
+        stream.write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x43, 0x06))
         // 3. Error correction level (Level L)
         stream.write(byteArrayOf(0x1D, 0x28, 0x6B, 0x03, 0x00, 0x31, 0x45, 0x30))
         // 4. Store data

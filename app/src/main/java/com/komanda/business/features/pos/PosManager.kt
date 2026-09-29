@@ -2,6 +2,7 @@ package com.komanda.business.features.pos
 
 import android.util.Log
 import com.komanda.business.core.model.AdminDashboardOrder
+import com.komanda.business.core.model.orderTrackingUrl
 import com.komanda.business.core.network.CatalogCategoryDto
 import com.komanda.business.core.network.CatalogItemDto
 import com.komanda.business.core.network.CreateDirectOrderRequest
@@ -23,7 +24,9 @@ class PosManager(
     private val tenantId: String,
     private val api: KomandaApi,
     private val printerRouter: PrinterRouter? = null,
-    private val tenantName: String = "Komanda"
+    private val tenantName: String = "Komanda",
+    private val baseUrl: String = "",
+    private val attemptStore: CheckoutAttemptStore? = null
 ) {
 
     private val tag = "PosManager"
@@ -34,11 +37,17 @@ class PosManager(
     private val _items = MutableStateFlow<List<CatalogItemDto>>(emptyList())
     val items: StateFlow<List<CatalogItemDto>> = _items.asStateFlow()
 
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
     private val _quantities = MutableStateFlow<Map<String, Int>>(emptyMap())
     val quantities: StateFlow<Map<String, Int>> = _quantities.asStateFlow()
 
     private val _customerName = MutableStateFlow("")
     val customerName: StateFlow<String> = _customerName.asStateFlow()
+
+    private val _discountCode = MutableStateFlow("")
+    val discountCode: StateFlow<String> = _discountCode.asStateFlow()
 
     private val _notes = MutableStateFlow("")
     val notes: StateFlow<String> = _notes.asStateFlow()
@@ -47,6 +56,7 @@ class PosManager(
     val submitting: StateFlow<Boolean> = _submitting.asStateFlow()
 
     suspend fun loadCatalog() {
+        _isLoading.value = true
         try {
             val catRes = api.listCategories(tenantId)
             if (catRes.isSuccessful && catRes.body() != null) {
@@ -59,6 +69,8 @@ class PosManager(
             }
         } catch (e: Exception) {
             Log.e(tag, "Failed to load catalog", e)
+        } finally {
+            _isLoading.value = false
         }
     }
 
@@ -76,6 +88,10 @@ class PosManager(
         _customerName.value = name
     }
 
+    fun setDiscountCode(code: String) {
+        _discountCode.value = code
+    }
+
     fun setNotes(notes: String) {
         _notes.value = notes
     }
@@ -83,18 +99,16 @@ class PosManager(
     fun clearForm() {
         _quantities.value = emptyMap()
         _customerName.value = ""
+        _discountCode.value = ""
         _notes.value = ""
     }
 
     val selectedCount: Int
-        get() = _quantities.value.values.sumOf { if (it > 0) 1 as Int else 0 as Int }
+        get() = _quantities.value.values.sum()
 
     suspend fun submitDirectOrder(): DirectOrderResult {
         if (selectedCount == 0) {
             return DirectOrderResult.Error("Seleccioná al menos un producto.")
-        }
-        if (_customerName.value.trim().isBlank()) {
-            return DirectOrderResult.Error("Ingresá el nombre del cliente.")
         }
 
         _submitting.value = true
@@ -109,14 +123,24 @@ class PosManager(
                 )
             }
 
+        val customerName = _customerName.value.trim().ifBlank { "NN" }
+        val discountCode = _discountCode.value.trim().ifBlank { null }
+        val notes = _notes.value.trim().ifBlank { null }
         val body = CreateDirectOrderRequest(
             items = requestItems,
-            customer = DirectOrderCustomerRequest(name = _customerName.value.trim()),
-            notes = _notes.value.trim().ifBlank { null }
+            customer = DirectOrderCustomerRequest(name = customerName),
+            notes = notes,
+            discountCode = discountCode
         )
 
+        val itemsList = _quantities.value
+            .filter { it.value > 0 }
+            .map { it.key to it.value }
+        val cartHash = CheckoutAttemptStore.computeCartHash(itemsList, customerName, notes, discountCode)
+        val attempt = attemptStore?.getOrStartAttempt(tenantId, cartHash)
+        val idempotencyKey = attempt?.idempotencyKey ?: UUID.randomUUID().toString()
+
         return try {
-            val idempotencyKey = UUID.randomUUID().toString()
             val response = api.createDirectOrder(
                 tenantId = tenantId,
                 idempotencyKey = idempotencyKey,
@@ -125,16 +149,23 @@ class PosManager(
 
             if (!response.isSuccessful || response.body() == null) {
                 val errorMsg = response.errorBody()?.string() ?: "Error al crear el pedido."
+                attempt?.let { attemptStore?.markAttemptUnknown(tenantId, it) }
                 _submitting.value = false
                 return DirectOrderResult.Error(errorMsg)
             }
 
             val order = response.body()!!.toDashboardOrder()
+            attempt?.let {
+                attemptStore?.markAttemptConfirmed(tenantId, it, order.id)
+                attemptStore?.clearConfirmedAttempt(tenantId)
+            }
 
             // Dispatches automatic printing according to configured printer triggers
             printerRouter?.let { router ->
                 try {
-                    val ticketPayload = order.toTicketPayload(tenantName = tenantName)
+                    val ticketPayload = order.toTicketPayload(tenantName = tenantName).copy(
+                        trackingUrl = orderTrackingUrl(baseUrl, tenantId, order.id)
+                    )
                     router.handleDirectPosOrder(ticketPayload)
                 } catch (e: Exception) {
                     Log.e(tag, "Print error after creating direct order", e)
@@ -146,6 +177,7 @@ class PosManager(
             DirectOrderResult.Success(order)
         } catch (e: Exception) {
             Log.e(tag, "Error submitting direct order", e)
+            attempt?.let { attemptStore?.markAttemptUnknown(tenantId, it) }
             _submitting.value = false
             DirectOrderResult.Error(e.message ?: "Error al crear el pedido.")
         }

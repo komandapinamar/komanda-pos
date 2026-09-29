@@ -20,16 +20,16 @@ class AdminDashboardOrderTest {
 
     @Test
     fun `statusLabel returns exact Spanish label from Next js`() {
-        assertEquals("Aprobado", AdminDashboardOrder.statusLabel("approved"))
-        assertEquals("En preparación", AdminDashboardOrder.statusLabel("preparing"))
-        assertEquals("Listo", AdminDashboardOrder.statusLabel("ready"))
+        assertEquals("Preparando", AdminDashboardOrder.statusLabel("approved"))
+        assertEquals("Preparando", AdminDashboardOrder.statusLabel("preparing"))
+        assertEquals("Listo para entregar", AdminDashboardOrder.statusLabel("ready"))
         assertEquals("Entregado", AdminDashboardOrder.statusLabel("delivered"))
         assertEquals("Cancelado", AdminDashboardOrder.statusLabel("cancelled"))
     }
 
     @Test
     fun `nextStatus returns correct succession from Next js`() {
-        assertEquals("preparing", AdminDashboardOrder.nextStatus("approved"))
+        assertEquals("ready", AdminDashboardOrder.nextStatus("approved"))
         assertEquals("ready", AdminDashboardOrder.nextStatus("preparing"))
         assertEquals("delivered", AdminDashboardOrder.nextStatus("ready"))
         assertNull(AdminDashboardOrder.nextStatus("delivered"))
@@ -38,9 +38,9 @@ class AdminDashboardOrderTest {
 
     @Test
     fun `nextStatusLabel returns exact button label from Next js`() {
-        assertEquals("Preparar", AdminDashboardOrder.nextStatusLabel("approved"))
-        assertEquals("Marcar listo", AdminDashboardOrder.nextStatusLabel("preparing"))
-        assertEquals("Marcar entregado", AdminDashboardOrder.nextStatusLabel("ready"))
+        assertEquals("Listo para entregar", AdminDashboardOrder.nextStatusLabel("approved"))
+        assertEquals("Listo para entregar", AdminDashboardOrder.nextStatusLabel("preparing"))
+        assertEquals("Entregado", AdminDashboardOrder.nextStatusLabel("ready"))
         assertNull(AdminDashboardOrder.nextStatusLabel("delivered"))
         assertNull(AdminDashboardOrder.nextStatusLabel("cancelled"))
     }
