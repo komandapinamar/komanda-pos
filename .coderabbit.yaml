@@ -1,0 +1,171 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# Komanda POS — native Android operator/counter app (Kotlin + Compose).
+language: "en-US"
+inheritance: false
+
+reviews:
+  profile: "assertive"
+  high_level_summary: true
+  high_level_summary_in_walkthrough: false
+  review_status: true
+  review_details: false
+  poem: false
+  changed_files_summary: true
+  abort_on_close: true
+  commit_status: true
+
+  auto_review:
+    enabled: true
+    drafts: false
+    auto_incremental_review: true
+    base_branches:
+      - main
+    ignore_title_keywords:
+      - "wip"
+      - "[skip ci]"
+
+  tools:
+    detekt:
+      enabled: true
+    actionlint:
+      enabled: true
+    gitleaks:
+      enabled: true
+    semgrep:
+      enabled: true
+
+  pre_merge_checks:
+    docstrings:
+      enabled: false
+    title:
+      enabled: true
+    issue_assessment:
+      enabled: true
+    custom_checks:
+      - name: "Tenant and session scope preserved"
+        mode: "error"
+        instructions: |
+          Fail if a change lets order, billing, or printing data survive a
+          logout or an account switch, if the active tenant/store id is read
+          from unvalidated local state instead of the authenticated session,
+          or if session credentials move out of SecureSessionStorage into
+          plain SharedPreferences. Verify persisted session state is cleared
+          when the session is invalidated.
+
+      - name: "Money uses Long minor units"
+        mode: "error"
+        instructions: |
+          Amounts must be Long minor units. Fail on Double or Float holding
+          a monetary value, on arithmetic that mixes money with a float, and
+          on a formatting path that loses precision above 2^53. Require an
+          explicit, documented rounding rule when converting between units
+          or applying a payment method.
+
+  path_instructions:
+    - path: "app/src/main/java/**/*.kt"
+      instructions: |
+        Kotlin conventions: prefer expression bodies and value classes.
+        Flag `!!`, `GlobalScope`, `runBlocking` on the main thread, and
+        swallowed `catch (e: Exception) {}`. Require coroutines launched in
+        a structured scope tied to the caller's lifecycle, and flag mutable
+        shared state touched from multiple threads without synchronization.
+
+    - path: "app/src/main/java/**/core/network/**"
+      instructions: |
+        Retrofit/OkHttp. Fail on cleartext HTTP URLs, on a missing client
+        timeout, and on an interceptor that logs request or response bodies
+        where they may carry auth tokens or customer data. Require the token
+        to be attached only to the configured API host and stripped on a
+        cross-host redirect. Verify a 401 triggers exactly one refresh
+        attempt rather than a retry storm.
+
+    - path: "app/src/main/java/**/core/auth/**"
+      instructions: |
+        Session and auth state — highest risk. Require the token to be stored
+        through SecureSessionStorage (EncryptedSharedPreferences) and never
+        in plain prefs or logs. Fail on a session that is not cleared on
+        logout or on refresh failure, on credentials left in an in-memory
+        singleton that survives a logout, and on any error path that logs
+        the raw response body.
+
+    - path: "app/src/main/java/**/core/audio/**"
+      instructions: |
+        Order-announcement audio. Flag any playback started from a
+        non-main dispatcher, a sound resource that is not released after
+        use, and an audio focus request that is not relinquished. Verify a
+        new sound does not interrupt an in-progress announcement.
+
+    - path: "app/src/main/java/**/features/orders/**"
+      instructions: |
+        Order management. Require tenant scoping on every API call. Fail if
+        an order status transition is applied client-side without the
+        server having confirmed it, and if the SSE listener can process an
+        event for a tenant other than the active one. Verify the SSE cursor
+        is persisted per tenant so events are not lost or replayed across a
+        tenant switch.
+
+    - path: "app/src/main/java/**/features/pos/**"
+      instructions: |
+        Point-of-sale. Require order totals to be computed or confirmed
+        server-side; flag any client-side arithmetic that is presented as
+        the amount charged. Fail if a checkout attempt can be retried without
+        an idempotency key.
+
+    - path: "app/src/main/java/**/features/billing/**"
+      instructions: |
+        Billing and cash shifts. Require that cash totals are reconciled
+        against server data and that a shift cannot be closed while an
+        unbalanced state is silently discarded. Fail on Double/Float money
+        and on a rounding rule introduced without a stated rule.
+
+    - path: "app/src/main/java/**/hardware/printing/**"
+      instructions: |
+        Thermal ESC/POS. Flag any escape sequence emitted without a length
+        matching the bytes actually written, and any untrusted string
+        encoded without stripping control characters (ESC, GS, NUL), which
+        can inject commands into the printer stream. Verify a receipt is not
+        recorded as printed until the write completes, that PrintJournalStore
+        prevents a retry from duplicating a receipt, and that a failed
+        Bluetooth/TCP write is reported rather than swallowed.
+
+    - path: "app/src/main/java/**/ui/**"
+      instructions: |
+        Compose UI. Flag business logic and direct network calls inside
+        composables, blocking I/O on the main thread, and a `LaunchedEffect`
+        keyed on an unstable value that restarts on every recomposition.
+        Require loading and error states for every read, and cleanup for any
+        polling or listener.
+
+    - path: "app/src/main/AndroidManifest.xml"
+      instructions: |
+        Fail on a newly added permission not required by the feature, on an
+        exported component that is not explicitly protected, and on a
+        removed `usesCleartextTraffic` restriction. Keep Bluetooth
+        permissions scoped to the printing feature.
+
+    - path: "app/src/test/**/*.kt"
+      instructions: |
+        Require failure-path coverage: offline behavior, API errors, and
+        tenant switching. Flag disabled tests, weakened assertions, and
+        tests that assert on a mock rather than observable behavior.
+
+    - path: "app/src/androidTest/**/*.kt"
+      instructions: |
+        Instrumented tests. Flag any that depends on network reachability or
+        on a real printer, since those are non-deterministic in CI.
+
+    - path: "*.gradle.kts"
+      instructions: |
+        Fail on an unexplained new dependency or a major-version upgrade.
+        Keep release builds minified and verify no debug signing config
+        reaches a release variant.
+
+  path_filters:
+    - "**/build/**"
+    - "**/.gradle/**"
+    - "**/.kotlin/**"
+    - "**/*.md"
+
+chat:
+  auto_reply: true
+  art: false
