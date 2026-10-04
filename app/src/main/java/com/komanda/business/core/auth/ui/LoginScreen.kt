@@ -43,6 +43,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.komanda.business.ui.theme.Amber400
 import com.komanda.business.ui.theme.Red400
@@ -90,16 +91,16 @@ fun LoginScreen(
             ) {
                 Text(
                     text = "Komanda POS",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Thin,
-                        letterSpacing = 1.sp
+                    style = MaterialTheme.typography.headlineLarge.copy(
+                        fontWeight = FontWeight.Normal,
+                        letterSpacing = (-0.02).em
                     ),
                     color = Color.White
                 )
 
                 Text(
                     text = "Terminal Punto de Venta",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodyLarge,
                     color = Zinc400,
                     modifier = Modifier.padding(top = 4.dp, bottom = 28.dp)
                 )

@@ -49,6 +49,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.komanda.business.core.model.AdminDashboardOrder
 import com.komanda.business.core.model.OrderStatuses
@@ -371,7 +372,7 @@ fun ConnectionBadge(connectionState: ConnectionState) {
             text = label.uppercase(),
             fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
-            letterSpacing = 1.sp,
+            letterSpacing = 0.05.em,
             color = text
         )
     }
@@ -443,7 +444,7 @@ fun AdminDashboardOrderCard(
                                 color = Zinc300,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                letterSpacing = 1.sp
+                                letterSpacing = 0.05.em
                             )
                         }
                     }
@@ -486,7 +487,7 @@ fun AdminDashboardOrderCard(
                             text = statusText.uppercase(),
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Black,
-                            letterSpacing = 1.sp,
+                            letterSpacing = (-0.02).em,
                             color = statusTextColor
                         )
                     }

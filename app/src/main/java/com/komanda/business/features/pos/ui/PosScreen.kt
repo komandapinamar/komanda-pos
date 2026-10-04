@@ -47,6 +47,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.komanda.business.core.network.CatalogItemDto
 import com.komanda.business.features.pos.DirectOrderResult
@@ -190,14 +191,13 @@ fun PosScreen(
                     Column {
                         Text(
                             text = "Komanda",
-                            fontSize = 13.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
                             color = KomandaTokens.AccentTertiary
                         )
                         Text(
                             text = "Crear pedido directo",
-                            fontSize = 28.sp,
+                            fontSize = 30.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.White
                         )
@@ -278,9 +278,9 @@ fun PosScreen(
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
                                         text = category.name.uppercase(),
-                                        fontSize = 13.sp,
+                                        fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
-                                        letterSpacing = 1.sp,
+                                        letterSpacing = 0.05.em,
                                         color = KomandaTokens.AccentTertiary
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
@@ -305,9 +305,9 @@ fun PosScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
                                     text = "VARIOS",
-                                    fontSize = 13.sp,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp,
+                                    letterSpacing = 0.05.em,
                                     color = KomandaTokens.AccentTertiary
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))

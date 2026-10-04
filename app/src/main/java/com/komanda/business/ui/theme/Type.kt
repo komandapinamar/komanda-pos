@@ -5,6 +5,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.komanda.business.R
 
@@ -15,42 +16,110 @@ val InstrumentSansFontFamily = FontFamily(
     Font(R.font.instrument_sans_bold, FontWeight.Bold)
 )
 
-private val defaultTypography = Typography()
-
 val Typography = Typography(
-    displayLarge = defaultTypography.displayLarge.copy(fontFamily = InstrumentSansFontFamily),
-    displayMedium = defaultTypography.displayMedium.copy(fontFamily = InstrumentSansFontFamily),
-    displaySmall = defaultTypography.displaySmall.copy(fontFamily = InstrumentSansFontFamily),
+    displayLarge = TextStyle(
+        fontFamily = InstrumentSansFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 64.sp,
+        lineHeight = 72.sp,
+        letterSpacing = (-0.02).em
+    ),
+    displayMedium = TextStyle(
+        fontFamily = InstrumentSansFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 48.sp,
+        lineHeight = 54.sp,
+        letterSpacing = (-0.02).em
+    ),
+    displaySmall = TextStyle(
+        fontFamily = InstrumentSansFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 38.sp,
+        lineHeight = 44.sp,
+        letterSpacing = (-0.02).em
+    ),
     headlineLarge = TextStyle(
         fontFamily = InstrumentSansFontFamily,
         fontWeight = FontWeight.Bold,
-        fontSize = 28.sp,
-        lineHeight = 34.sp
+        fontSize = 34.sp,
+        lineHeight = 40.sp,
+        letterSpacing = (-0.02).em
     ),
-    headlineMedium = defaultTypography.headlineMedium.copy(fontFamily = InstrumentSansFontFamily),
-    headlineSmall = defaultTypography.headlineSmall.copy(fontFamily = InstrumentSansFontFamily),
+    headlineMedium = TextStyle(
+        fontFamily = InstrumentSansFontFamily,
+        fontWeight = FontWeight.Bold,
+        fontSize = 28.sp,
+        lineHeight = 34.sp,
+        letterSpacing = (-0.02).em
+    ),
+    headlineSmall = TextStyle(
+        fontFamily = InstrumentSansFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 24.sp,
+        lineHeight = 30.sp,
+        letterSpacing = (-0.01).em
+    ),
     titleLarge = TextStyle(
         fontFamily = InstrumentSansFontFamily,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 20.sp,
-        lineHeight = 26.sp
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        letterSpacing = 0.sp
     ),
-    titleMedium = defaultTypography.titleMedium.copy(fontFamily = InstrumentSansFontFamily),
-    titleSmall = defaultTypography.titleSmall.copy(fontFamily = InstrumentSansFontFamily),
+    titleMedium = TextStyle(
+        fontFamily = InstrumentSansFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 18.sp,
+        lineHeight = 24.sp,
+        letterSpacing = 0.sp
+    ),
+    titleSmall = TextStyle(
+        fontFamily = InstrumentSansFontFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
+        letterSpacing = 0.sp
+    ),
     bodyLarge = TextStyle(
         fontFamily = InstrumentSansFontFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 16.sp,
-        lineHeight = 24.sp
+        fontSize = 18.sp,
+        lineHeight = 26.sp,
+        letterSpacing = 0.sp
     ),
     bodyMedium = TextStyle(
         fontFamily = InstrumentSansFontFamily,
         fontWeight = FontWeight.Normal,
-        fontSize = 14.sp,
-        lineHeight = 20.sp
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
+        letterSpacing = 0.sp
     ),
-    bodySmall = defaultTypography.bodySmall.copy(fontFamily = InstrumentSansFontFamily),
-    labelLarge = defaultTypography.labelLarge.copy(fontFamily = InstrumentSansFontFamily),
-    labelMedium = defaultTypography.labelMedium.copy(fontFamily = InstrumentSansFontFamily),
-    labelSmall = defaultTypography.labelSmall.copy(fontFamily = InstrumentSansFontFamily)
+    bodySmall = TextStyle(
+        fontFamily = InstrumentSansFontFamily,
+        fontWeight = FontWeight.Normal,
+        fontSize = 14.sp,
+        lineHeight = 20.sp,
+        letterSpacing = 0.sp
+    ),
+    labelLarge = TextStyle(
+        fontFamily = InstrumentSansFontFamily,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 16.sp,
+        lineHeight = 22.sp,
+        letterSpacing = 0.sp
+    ),
+    labelMedium = TextStyle(
+        fontFamily = InstrumentSansFontFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 14.sp,
+        lineHeight = 18.sp,
+        letterSpacing = 0.03.em
+    ),
+    labelSmall = TextStyle(
+        fontFamily = InstrumentSansFontFamily,
+        fontWeight = FontWeight.Medium,
+        fontSize = 12.sp,
+        lineHeight = 16.sp,
+        letterSpacing = 0.05.em
+    )
 )
