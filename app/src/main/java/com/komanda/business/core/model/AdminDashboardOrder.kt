@@ -60,8 +60,34 @@ data class AdminDashboardOrder(
     val deliveredAt: String? = null,
     val createdAt: String,
     val updatedAt: String,
-    val version: Int? = null
+    val version: Int? = null,
+    val paymentExpiresAt: String? = null,
+    val tender: String? = null
 ) {
+    val isCashPending: Boolean
+        get() = status != OrderStatuses.CANCELLED &&
+                status != OrderStatuses.DELIVERED &&
+                paymentStatus == "pending" &&
+                (tender == "cash" || source == "storefront_cash" || source == "storefront-cash")
+
+    fun minutesRemaining(nowMillis: Long = System.currentTimeMillis()): Long? {
+        if (paymentExpiresAt.isNullOrBlank()) return null
+        val expiryMillis = parseIsoTimestamp(paymentExpiresAt) ?: return null
+        val diffMillis = expiryMillis - nowMillis
+        return if (diffMillis <= 0L) 0L else ((diffMillis + 59999L) / 60000L)
+    }
+
+    val minutesRemaining: Long?
+        get() = minutesRemaining(System.currentTimeMillis())
+
+    fun isPaymentExpired(nowMillis: Long = System.currentTimeMillis()): Boolean {
+        if (paymentExpiresAt.isNullOrBlank()) return false
+        val expiryMillis = parseIsoTimestamp(paymentExpiresAt) ?: return false
+        return expiryMillis <= nowMillis
+    }
+
+    val isPaymentExpired: Boolean
+        get() = isPaymentExpired(System.currentTimeMillis())
     fun toTicketPayload(tenantName: String = "Komanda", copies: Int? = null): TicketPayload {
         val resolvedCopies = copies ?: 1
         return TicketPayload(
@@ -111,6 +137,9 @@ data class AdminDashboardOrder(
             if (source == "mercadopago-webhook" || source == "mercadopago_webhook") {
                 return "Pago Mercado Pago"
             }
+            if (source == "storefront_cash" || source == "storefront-cash") {
+                return "Efectivo Storefront"
+            }
             return "Origen no disponible"
         }
 
@@ -155,6 +184,30 @@ data class AdminDashboardOrder(
                 outFormat.format(parsed)
             } catch (_: Exception) {
                 value
+            }
+        }
+
+        fun parseIsoTimestamp(isoDate: String?): Long? {
+            if (isoDate.isNullOrBlank()) return null
+            // OffsetDateTime handles both 'Z' and explicit offsets (e.g. +02:00).
+            try {
+                return java.time.OffsetDateTime.parse(isoDate).toInstant().toEpochMilli()
+            } catch (_: Throwable) {
+                // fall through
+            }
+            try {
+                return java.time.Instant.parse(isoDate).toEpochMilli()
+            } catch (_: Throwable) {
+                // fall through
+            }
+            return try {
+                val cleaned = isoDate.split(".")[0].replace("Z", "")
+                val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.US).apply {
+                    timeZone = TimeZone.getTimeZone("UTC")
+                }
+                format.parse(cleaned)?.time
+            } catch (_: Exception) {
+                null
             }
         }
     }

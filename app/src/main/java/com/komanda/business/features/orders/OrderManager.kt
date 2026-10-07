@@ -5,9 +5,11 @@ import com.komanda.business.core.audio.OrderAnnouncer
 import com.komanda.business.core.model.AdminDashboardOrder
 import com.komanda.business.core.model.OrderStatuses
 import com.komanda.business.core.model.orderTrackingUrl
+import com.komanda.business.core.network.CollectCashRequest
 import com.komanda.business.core.network.ConnectionState
 import com.komanda.business.core.network.KomandaApi
 import com.komanda.business.core.network.SseOrderEventListener
+import com.komanda.business.core.network.RefundCashRequest
 import com.komanda.business.core.network.TransitionOrderRequest
 import com.komanda.business.hardware.printing.model.PrinterConfig
 import com.komanda.business.hardware.printing.PrinterRouter
@@ -155,9 +157,10 @@ class OrderManager(
                     _orders.value = (if (dashboardOrder.isActive()) listOf(dashboardOrder) + rest else rest)
                         .sortedByDescending { it.updatedAt }
                     _lastUpdatedAt.value = currentIsoDate()
-                    // Only a first live event after a successful snapshot may print.
-                    if (seenOrderIds.add(orderId) && running && _snapshotState.value == SnapshotState.Ready &&
-                        dashboardOrder.status == OrderStatuses.APPROVED) onNewOrderArrived(dashboardOrder)
+                    // Only a first live event after a successful snapshot may print, and only if not pending cash
+                    if (running && _snapshotState.value == SnapshotState.Ready &&
+                        dashboardOrder.status == OrderStatuses.APPROVED && !dashboardOrder.isCashPending &&
+                        seenOrderIds.add(orderId)) onNewOrderArrived(dashboardOrder)
                     return true
                 }
                 if (response.code() != 404) return false
@@ -181,6 +184,7 @@ class OrderManager(
     }
 
     fun transitionOrder(order: AdminDashboardOrder) {
+        if (order.isCashPending) return
         val version = order.version ?: return
         val targetStatus = AdminDashboardOrder.nextStatus(order.status) ?: return
 
@@ -225,6 +229,51 @@ class OrderManager(
         }
     }
 
+    fun voidUnpaidOrder(order: AdminDashboardOrder, reason: String) {
+        if (order.status == OrderStatuses.CANCELLED) {
+            scope.launch {
+                orderMutex.withLock {
+                    _orders.value = _orders.value.filter { it.id != order.id }
+                }
+            }
+            return
+        }
+        if (!order.isCashPending) return
+        val version = order.version ?: return
+
+        _transitioningOrderId.value = order.id
+
+        scope.launch {
+            try {
+                val response = api.transitionOrderStatus(
+                    tenantId = tenantId,
+                    orderId = order.id,
+                    version = version.toString(),
+                    body = TransitionOrderRequest(
+                        fulfillmentStatus = OrderStatuses.CANCELLED,
+                        reason = reason
+                    )
+                )
+
+                if (response.isSuccessful && response.body() != null) {
+                    val updated = response.body()!!.toDashboardOrder()
+                    orderMutex.withLock {
+                        _orders.value = _orders.value.mapNotNull {
+                            if (it.id != updated.id) it else updated.takeIf { it.isActive() }
+                        }
+                    }
+                    _lastUpdatedAt.value = currentIsoDate()
+                } else {
+                    Log.e(tag, "Failed to void unpaid order ${order.id}: ${response.code()}")
+                }
+            } catch (e: Exception) {
+                Log.e(tag, "Error voiding unpaid order ${order.id}", e)
+            } finally {
+                _transitioningOrderId.value = null
+            }
+        }
+    }
+
     suspend fun printOrderTicket(order: AdminDashboardOrder, targetPrinterId: String? = null) {
         val router = printerRouter ?: return
         val payload = order.toTicketPayload(tenantName = tenantName).copy(
@@ -235,6 +284,138 @@ class OrderManager(
 
     fun announceOrderReady(purchaseNumber: String, clientName: String? = null) {
         announcer?.announceOrderReady(purchaseNumber, clientName)
+    }
+
+    suspend fun collectCash(
+        order: AdminDashboardOrder,
+        authMethod: String,
+        authCode: String? = null
+    ): CollectCashResult {
+        return try {
+            val idempotencyKey = java.util.UUID.randomUUID().toString()
+            val request = CollectCashRequest(
+                authMethod = authMethod,
+                authCode = authCode
+            )
+            val response = api.collectCash(
+                tenantId = tenantId,
+                orderId = order.id,
+                idempotencyKey = idempotencyKey,
+                body = request
+            )
+
+            if (response.isSuccessful && response.body() != null) {
+                val body = response.body()!!
+                val paidAtIso = body.paidAt ?: currentIsoDate()
+                val updatedOrder = orderMutex.withLock {
+                    var target: AdminDashboardOrder? = null
+                    val serverVersion = body.version
+                    _orders.value = _orders.value.map {
+                        if (it.id == order.id) {
+                            val u = it.copy(
+                                paymentStatus = body.paymentStatus.ifBlank { "paid" },
+                                version = serverVersion ?: ((it.version ?: 1) + 1),
+                                updatedAt = paidAtIso
+                            )
+                            target = u
+                            u
+                        } else it
+                    }
+                    target ?: order.copy(
+                        paymentStatus = body.paymentStatus.ifBlank { "paid" },
+                        version = serverVersion ?: ((order.version ?: 1) + 1),
+                        updatedAt = paidAtIso
+                    )
+                }
+                _lastUpdatedAt.value = currentIsoDate()
+                if (updatedOrder.status == OrderStatuses.APPROVED && seenOrderIds.add(updatedOrder.id)) {
+                    onNewOrderArrived(updatedOrder)
+                }
+                CollectCashResult.Success(updatedOrder)
+            } else {
+                val errorStr = response.errorBody()?.string().orEmpty()
+                val message = when {
+                    errorStr.contains("INVALID_PICKUP_PIN") -> "El PIN ingresado es incorrecto."
+                    errorStr.contains("NO_OPEN_CASH_SHIFT") -> "No hay un turno de caja abierto."
+                    else -> parseErrorMessage(errorStr).ifBlank { "Error al registrar el cobro en efectivo." }
+                }
+                CollectCashResult.Error(message)
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Log.e(tag, "Error collecting cash for order ${order.id}", e)
+            CollectCashResult.Error("Error de conexión. Intente nuevamente.")
+        }
+    }
+
+    suspend fun refundCash(
+        order: AdminDashboardOrder,
+        reason: String,
+        operatorNote: String? = null
+    ): RefundCashResult {
+        return try {
+            val idempotencyKey = java.util.UUID.randomUUID().toString()
+            val request = RefundCashRequest(
+                reason = reason.trim(),
+                operatorNote = operatorNote?.trim()?.takeIf { it.isNotEmpty() }
+            )
+            val response = api.refundCash(
+                tenantId = tenantId,
+                orderId = order.id,
+                idempotencyKey = idempotencyKey,
+                body = request
+            )
+
+            if (response.isSuccessful && response.body() != null) {
+                val body = response.body()!!
+                val refundedAtIso = body.refundedAt ?: currentIsoDate()
+                val serverVersion = body.version
+                val updatedOrder = orderMutex.withLock {
+                    var target: AdminDashboardOrder? = null
+                    _orders.value = _orders.value.mapNotNull {
+                        if (it.id != order.id) it else {
+                            val u = it.copy(
+                                paymentStatus = body.paymentStatus.ifBlank { "refunded" },
+                                status = body.fulfillmentStatus.ifBlank { OrderStatuses.CANCELLED },
+                                version = serverVersion ?: ((it.version ?: 1) + 1),
+                                updatedAt = refundedAtIso
+                            )
+                            target = u
+                            u.takeIf { it.isActive() }
+                        }
+                    }
+                    target ?: order.copy(
+                        paymentStatus = body.paymentStatus.ifBlank { "refunded" },
+                        status = body.fulfillmentStatus.ifBlank { OrderStatuses.CANCELLED },
+                        version = serverVersion ?: ((order.version ?: 1) + 1),
+                        updatedAt = refundedAtIso
+                    )
+                }
+                _lastUpdatedAt.value = currentIsoDate()
+                RefundCashResult.Success(updatedOrder)
+            } else {
+                val errorStr = response.errorBody()?.string().orEmpty()
+                val message = when {
+                    errorStr.contains("NO_OPEN_CASH_SHIFT") -> "No hay un turno de caja abierto."
+                    errorStr.contains("ORDER_CONFLICT") ->
+                        parseErrorMessage(errorStr).ifBlank { "La orden no puede ser reembolsada en su estado actual." }
+                    else -> parseErrorMessage(errorStr).ifBlank { "Error al procesar la devolución en efectivo." }
+                }
+                RefundCashResult.Error(message)
+            }
+        } catch (e: Exception) {
+            if (e is kotlinx.coroutines.CancellationException) throw e
+            Log.e(tag, "Error refunding cash for order ${order.id}", e)
+            RefundCashResult.Error("Error de conexión. Intente nuevamente.")
+        }
+    }
+
+    private fun parseErrorMessage(jsonStr: String): String {
+        val detailMatch = Regex("\"detail\"\\s*:\\s*\"([^\"]+)\"").find(jsonStr)
+        if (detailMatch != null) return detailMatch.groupValues[1]
+        val messageMatch = Regex("\"message\"\\s*:\\s*\"([^\"]+)\"").find(jsonStr)
+        if (messageMatch != null) return messageMatch.groupValues[1]
+        return ""
     }
 
     private fun currentIsoDate(): String {
@@ -249,6 +430,16 @@ sealed interface SnapshotState {
     data object Loading : SnapshotState
     data object Ready : SnapshotState
     data object Error : SnapshotState
+}
+
+sealed interface CollectCashResult {
+    data class Success(val order: AdminDashboardOrder) : CollectCashResult
+    data class Error(val message: String) : CollectCashResult
+}
+
+sealed interface RefundCashResult {
+    data class Success(val order: AdminDashboardOrder) : RefundCashResult
+    data class Error(val message: String) : RefundCashResult
 }
 
 private fun AdminDashboardOrder.isActive() = status in setOf(

@@ -88,6 +88,24 @@ interface KomandaApi {
         @Body body: CreateInvoiceRequest
     ): Response<InvoiceResponse>
 
+    @Headers("Content-Type: application/json")
+    @POST("/api/v1/tenants/{tenantId}/orders/{orderId}/collect-cash")
+    suspend fun collectCash(
+        @Path("tenantId") tenantId: String,
+        @Path("orderId") orderId: String,
+        @Header("Idempotency-Key") idempotencyKey: String,
+        @Body body: CollectCashRequest
+    ): Response<CollectCashResponse>
+
+    @Headers("Content-Type: application/json")
+    @POST("/api/v1/tenants/{tenantId}/orders/{orderId}/refund-cash")
+    suspend fun refundCash(
+        @Path("tenantId") tenantId: String,
+        @Path("orderId") orderId: String,
+        @Header("Idempotency-Key") idempotencyKey: String,
+        @Body body: RefundCashRequest
+    ): Response<RefundCashResponse>
+
     @GET("/api/v1/tenants/{tenantId}/cash-shifts/current")
     suspend fun getCurrentCashShift(
         @Path("tenantId") tenantId: String
