@@ -1,0 +1,26 @@
+Komanda POS es la aplicación de mostrador y operación diaria de Komanda para locales gastronómicos.
+
+Tomá pedidos en el local, gestioná mesas y comanderas, cobrá en caja e imprimí tickets en impresoras térmicas ESC/POS por USB, Bluetooth o red local.
+
+QUÉ PODÉS HACER
+
+• Tomar pedidos y enviarlos a cocina en tiempo real.
+• Ver el tablero de pedidos y actualizar su estado.
+• Abrir y cerrar caja, registrar cobros en efectivo y consultar el resumen del turno.
+• Imprimir tickets, comandas y comprobantes en impresoras térmicas compatibles.
+• Administrar productos, categorías y precios desde el backoffice web.
+• Trabajar con varias sucursales y roles de operador con PIN.
+
+CÓMO FUNCIONA
+
+Komanda POS se conecta a tu cuenta de Komanda. El alta del comercio y la configuración del menú se hacen desde el panel web de Komanda. La app requiere una cuenta de operador habilitada por tu comercio.
+
+IMPRESIÓN TÉRMICA
+
+Compatible con impresoras ESC/POS conectadas por USB, Bluetooth o red local (TCP 9100). La app solicita permiso de cámara únicamente para escanear códigos de barras de productos y de la tarjeta de tu comercio.
+
+SOPORTE
+
+¿Problemas de acceso o configuración? Escribinos desde el panel de Komanda o a soporte@komanda.ar.
+
+Komanda está pensado para comercios de Argentina. Los precios, impuestos y medios de pago se configuran por comercio.

@@ -45,6 +45,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import com.komanda.business.BuildConfig
 import com.komanda.business.ui.theme.Amber400
 import com.komanda.business.ui.theme.Red400
 import com.komanda.business.ui.theme.Zinc400
@@ -254,12 +255,15 @@ fun LoginScreen(
                                             cursorColor = Amber400
                                         )
                                     )
-                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        TextButton(onClick = { tempServerUrl = "https://throwing-dust-public.ngrok-free.dev" }) {
-                                            Text("127.0.0.1 (USB)", fontSize = 11.sp, color = Amber400)
-                                        }
-                                        TextButton(onClick = { tempServerUrl = "http://10.0.2.2:3000" }) {
-                                            Text("10.0.2.2 (AVD)", fontSize = 11.sp, color = Amber400)
+                                    // Atajos de desarrollo: nunca se muestran en el build de release.
+                                    if (BuildConfig.DEBUG) {
+                                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            TextButton(onClick = { tempServerUrl = "http://127.0.0.1:3000" }) {
+                                                Text("127.0.0.1 (USB)", fontSize = 11.sp, color = Amber400)
+                                            }
+                                            TextButton(onClick = { tempServerUrl = "http://10.0.2.2:3000" }) {
+                                                Text("10.0.2.2 (AVD)", fontSize = 11.sp, color = Amber400)
+                                            }
                                         }
                                     }
                                 }

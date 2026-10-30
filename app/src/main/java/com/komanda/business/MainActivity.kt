@@ -23,6 +23,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.Lifecycle
@@ -58,8 +59,6 @@ enum class Screen {
     PRINTER_SETTINGS
 }
 
-private const val DEFAULT_BASE_URL = "https://throwing-dust-public.ngrok-free.dev"
-
 class MainActivity : ComponentActivity() {
 
     private lateinit var announcer: OrderAnnouncer
@@ -87,7 +86,7 @@ class MainActivity : ComponentActivity() {
     private var activePosManager: PosManager? = null
     private var activeBillingService: BillingService? = null
 
-    private var currentBaseUrl by mutableStateOf(DEFAULT_BASE_URL)
+    private var currentBaseUrl by mutableStateOf(BuildConfig.DEFAULT_BASE_URL)
 
     private fun updateServerUrl(newUrl: String) {
         val trimmed = newUrl.trim().trimEnd('/')
@@ -119,18 +118,21 @@ class MainActivity : ComponentActivity() {
         val prefs = getSharedPreferences("komanda_pos_prefs", MODE_PRIVATE)
         val savedBaseUrl = prefs.getString("server_base_url", null)
         currentBaseUrl = if (savedBaseUrl.isNullOrBlank() || savedBaseUrl == "http://127.0.0.1:3000") {
-            DEFAULT_BASE_URL
+            BuildConfig.DEFAULT_BASE_URL
         } else {
             savedBaseUrl
         }
 
         // Register USB permission broadcast receiver
         val filter = IntentFilter(UsbEscPosDriver.ACTION_USB_PERMISSION)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(usbReceiver, filter, RECEIVER_NOT_EXPORTED)
-        } else {
-            registerReceiver(usbReceiver, filter)
-        }
+        // El broadcast de permiso USB lo emite el sistema hacia este componente explicito,
+        // por eso NOT_EXPORTED: ninguna otra app puede inyectarlo.
+        ContextCompat.registerReceiver(
+            this,
+            usbReceiver,
+            filter,
+            ContextCompat.RECEIVER_NOT_EXPORTED,
+        )
 
         // 1. Audio Announcer (Native Android TextToSpeech offline for speaker)
         announcer = OrderAnnouncer(this)
