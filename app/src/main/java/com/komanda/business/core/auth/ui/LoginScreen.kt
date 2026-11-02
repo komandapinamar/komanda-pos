@@ -1,5 +1,6 @@
 package com.komanda.business.core.auth.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -37,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -46,9 +47,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.komanda.business.BuildConfig
-import com.komanda.business.ui.theme.Amber400
+import com.komanda.business.ui.theme.KomandaTokens
 import com.komanda.business.ui.theme.Red400
 import com.komanda.business.ui.theme.Zinc400
+import com.komanda.business.ui.theme.Zinc700
 import com.komanda.business.ui.theme.Zinc800
 import com.komanda.business.ui.theme.Zinc900
 import com.komanda.business.ui.theme.Zinc950
@@ -80,7 +82,8 @@ fun LoginScreen(
                 .widthIn(max = 440.dp)
                 .fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Zinc900),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(28.dp),
+            border = BorderStroke(1.25.dp, KomandaTokens.PrismRingBrush)
         ) {
             Column(
                 modifier = Modifier
@@ -91,10 +94,20 @@ fun LoginScreen(
                 verticalArrangement = Arrangement.Center
             ) {
                 Text(
+                    text = "KOMANDA",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.14.em,
+                    color = Zinc400
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
                     text = "Komanda POS",
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Normal,
-                        letterSpacing = (-0.02).em
+                        letterSpacing = (-0.04).em
                     ),
                     color = Color.White
                 )
@@ -112,15 +125,16 @@ fun LoginScreen(
                             .fillMaxWidth()
                             .padding(bottom = 16.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = Color(0x33F87171)
+                            containerColor = KomandaTokens.ErrorBg
                         ),
-                        shape = RoundedCornerShape(8.dp)
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.dp, Red400.copy(alpha = 0.35f))
                     ) {
                         Text(
                             text = errorMessage,
                             color = Red400,
                             style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(12.dp)
+                            modifier = Modifier.padding(14.dp)
                         )
                     }
                 }
@@ -130,27 +144,33 @@ fun LoginScreen(
                     onValueChange = { email = it },
                     label = { Text("Correo electrónico") },
                     singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Email,
                         imeAction = ImeAction.Next
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Amber400,
-                        unfocusedBorderColor = Zinc800,
-                        focusedLabelColor = Amber400,
+                        focusedContainerColor = KomandaTokens.SurfaceDeep,
+                        unfocusedContainerColor = KomandaTokens.SurfaceDeep,
+                        focusedBorderColor = KomandaTokens.AccentTertiary.copy(alpha = 0.45f),
+                        unfocusedBorderColor = Zinc700,
+                        focusedLabelColor = KomandaTokens.AccentTertiary,
                         unfocusedLabelColor = Zinc400,
-                        cursorColor = Amber400
+                        cursorColor = KomandaTokens.AccentTertiary,
+                        focusedTextColor = KomandaTokens.TextPrimary,
+                        unfocusedTextColor = KomandaTokens.TextPrimary
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
                     label = { Text("Contraseña") },
                     singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Password,
@@ -165,11 +185,15 @@ fun LoginScreen(
                         }
                     ),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Amber400,
-                        unfocusedBorderColor = Zinc800,
-                        focusedLabelColor = Amber400,
+                        focusedContainerColor = KomandaTokens.SurfaceDeep,
+                        unfocusedContainerColor = KomandaTokens.SurfaceDeep,
+                        focusedBorderColor = KomandaTokens.AccentTertiary.copy(alpha = 0.45f),
+                        unfocusedBorderColor = Zinc700,
+                        focusedLabelColor = KomandaTokens.AccentTertiary,
                         unfocusedLabelColor = Zinc400,
-                        cursorColor = Amber400
+                        cursorColor = KomandaTokens.AccentTertiary,
+                        focusedTextColor = KomandaTokens.TextPrimary,
+                        unfocusedTextColor = KomandaTokens.TextPrimary
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -183,12 +207,12 @@ fun LoginScreen(
                     },
                     enabled = email.isNotBlank() && password.isNotBlank() && !isLoading,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = Amber400,
-                        contentColor = Zinc950,
+                        containerColor = KomandaTokens.AccentTertiary,
+                        contentColor = KomandaTokens.AccentPrimary,
                         disabledContainerColor = Zinc800,
-                        disabledContentColor = Zinc400
+                        disabledContentColor = Zinc400.copy(alpha = 0.5f)
                     ),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = CircleShape,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp)
@@ -196,14 +220,14 @@ fun LoginScreen(
                     if (isLoading) {
                         CircularProgressIndicator(
                             color = Zinc950,
-                            modifier = Modifier.size(24.dp),
+                            modifier = Modifier.size(22.dp),
                             strokeWidth = 2.dp
                         )
                     } else {
                         Text(
                             text = "Iniciar Sesión",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp
+                            fontWeight = FontWeight.Medium,
+                            fontSize = 15.sp
                         )
                     }
                 }
@@ -228,11 +252,12 @@ fun LoginScreen(
                         AlertDialog(
                             onDismissRequest = { showServerDialog = false },
                             containerColor = Zinc900,
+                            shape = RoundedCornerShape(24.dp),
                             title = {
                                 Text(
                                     text = "Servidor backend",
-                                    color = Amber400,
-                                    fontWeight = FontWeight.Bold
+                                    color = KomandaTokens.TextPrimary,
+                                    fontWeight = FontWeight.Medium
                                 )
                             },
                             text = {
@@ -246,23 +271,26 @@ fun LoginScreen(
                                         value = tempServerUrl,
                                         onValueChange = { tempServerUrl = it },
                                         singleLine = true,
+                                        shape = RoundedCornerShape(16.dp),
                                         modifier = Modifier.fillMaxWidth(),
                                         colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = Amber400,
-                                            unfocusedBorderColor = Zinc800,
-                                            focusedTextColor = Color.White,
-                                            unfocusedTextColor = Color.White,
-                                            cursorColor = Amber400
+                                            focusedContainerColor = KomandaTokens.SurfaceDeep,
+                                            unfocusedContainerColor = KomandaTokens.SurfaceDeep,
+                                            focusedBorderColor = KomandaTokens.AccentTertiary,
+                                            unfocusedBorderColor = Zinc700,
+                                            focusedTextColor = KomandaTokens.TextPrimary,
+                                            unfocusedTextColor = KomandaTokens.TextPrimary,
+                                            cursorColor = KomandaTokens.AccentTertiary
                                         )
                                     )
                                     // Atajos de desarrollo: nunca se muestran en el build de release.
                                     if (BuildConfig.DEBUG) {
                                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                             TextButton(onClick = { tempServerUrl = "http://127.0.0.1:3000" }) {
-                                                Text("127.0.0.1 (USB)", fontSize = 11.sp, color = Amber400)
+                                                Text("127.0.0.1 (USB)", fontSize = 11.sp, color = KomandaTokens.AccentTertiary)
                                             }
                                             TextButton(onClick = { tempServerUrl = "http://10.0.2.2:3000" }) {
-                                                Text("10.0.2.2 (AVD)", fontSize = 11.sp, color = Amber400)
+                                                Text("10.0.2.2 (AVD)", fontSize = 11.sp, color = KomandaTokens.AccentTertiary)
                                             }
                                         }
                                     }
@@ -277,12 +305,13 @@ fun LoginScreen(
                                             onServerUrlChanged(trimmed)
                                         }
                                     },
+                                    shape = CircleShape,
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = Amber400,
-                                        contentColor = Zinc950
+                                        containerColor = KomandaTokens.AccentTertiary,
+                                        contentColor = KomandaTokens.AccentPrimary
                                     )
                                 ) {
-                                    Text("Guardar")
+                                    Text("Guardar", fontWeight = FontWeight.Medium)
                                 }
                             },
                             dismissButton = {

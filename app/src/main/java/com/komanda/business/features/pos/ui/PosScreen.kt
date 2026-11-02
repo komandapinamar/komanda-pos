@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -102,7 +103,7 @@ fun PosScreen(
             Surface(
                 color = Zinc900,
                 shadowElevation = 8.dp,
-                border = BorderStroke(1.dp, Zinc800)
+                border = BorderStroke(1.dp, KomandaTokens.Border)
             ) {
                 Row(
                     modifier = Modifier
@@ -118,16 +119,16 @@ fun PosScreen(
                             } else {
                                 "Ningún producto seleccionado"
                             },
-                            color = Color.White,
+                            color = KomandaTokens.TextPrimary,
                             fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Medium
                         )
                         if (totalUnits > 0 && cartSubtotal > 0) {
                             Text(
                                 text = "Total: $${cartSubtotal.toLong()}",
                                 color = KomandaTokens.AccentTertiary,
                                 fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
@@ -151,16 +152,16 @@ fun PosScreen(
                         colors = ButtonDefaults.buttonColors(
                             containerColor = KomandaTokens.AccentTertiary,
                             contentColor = KomandaTokens.AccentPrimary,
-                            disabledContainerColor = KomandaTokens.AccentTertiary.copy(alpha = 0.4f),
-                            disabledContentColor = KomandaTokens.AccentPrimary.copy(alpha = 0.4f)
+                            disabledContainerColor = KomandaTokens.AccentTertiary.copy(alpha = 0.35f),
+                            disabledContentColor = KomandaTokens.AccentPrimary.copy(alpha = 0.5f)
                         ),
-                        shape = RoundedCornerShape(2.dp),
+                        shape = CircleShape,
                         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
                     ) {
                         Text(
                             text = if (isSubmitting) "Creando pedido..." else "Crear pedido directo",
                             fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
@@ -180,26 +181,33 @@ fun PosScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .background(KomandaTokens.SurfacePill, CircleShape)
+                            .border(1.dp, KomandaTokens.Border, CircleShape)
+                    ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Volver a pedidos",
-                            tint = Zinc400
+                            tint = Zinc300
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
                     Column {
                         Text(
-                            text = "Komanda",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = KomandaTokens.AccentTertiary
+                            text = "MOSTRADOR · VENTA DIRECTA",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.12.em,
+                            color = Zinc400
                         )
                         Text(
                             text = "Crear pedido directo",
-                            fontSize = 30.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = (-0.02).em,
+                            color = KomandaTokens.TextPrimary
                         )
                     }
                 }
@@ -211,8 +219,8 @@ fun PosScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Red900.copy(alpha = 0.2f), RoundedCornerShape(2.dp))
-                            .border(1.dp, Red700, RoundedCornerShape(2.dp))
+                            .background(Red900.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                            .border(1.dp, Red400.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
                             .padding(16.dp)
                     ) {
                         Text(
@@ -228,16 +236,16 @@ fun PosScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(2.dp),
+                    shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = Zinc900),
-                    border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Zinc800))
+                    border = BorderStroke(1.25.dp, KomandaTokens.PrismRingBrush)
                 ) {
                     Column(modifier = Modifier.padding(24.dp)) {
                         Text(
                             text = "Productos",
                             fontSize = 20.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            fontWeight = FontWeight.Medium,
+                            color = KomandaTokens.TextPrimary
                         )
                         Spacer(modifier = Modifier.height(16.dp))
 
@@ -333,24 +341,24 @@ fun PosScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(2.dp),
+                    shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = Zinc900),
-                    border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Zinc800))
+                    border = BorderStroke(1.dp, KomandaTokens.Border)
                 ) {
                     Column(modifier = Modifier.padding(24.dp)) {
                         Text(
                             text = "Datos del cliente",
                             fontSize = 20.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            fontWeight = FontWeight.Medium,
+                            color = KomandaTokens.TextPrimary
                         )
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
                             text = "Nombre del cliente (opcional, por defecto: NN)",
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Zinc300
+                            color = Zinc400
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         OutlinedTextField(
@@ -360,23 +368,23 @@ fun PosScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = KomandaTokens.AccentTertiary,
+                                focusedBorderColor = KomandaTokens.AccentTertiary.copy(alpha = 0.45f),
                                 unfocusedBorderColor = Zinc700,
-                                focusedContainerColor = Zinc800,
-                                unfocusedContainerColor = Zinc800,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
+                                focusedContainerColor = KomandaTokens.SurfaceDeep,
+                                unfocusedContainerColor = KomandaTokens.SurfaceDeep,
+                                focusedTextColor = KomandaTokens.TextPrimary,
+                                unfocusedTextColor = KomandaTokens.TextPrimary
                             ),
-                            shape = RoundedCornerShape(2.dp)
+                            shape = RoundedCornerShape(16.dp)
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
                             text = "Código de descuento (opcional)",
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Zinc300
+                            color = Zinc400
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         OutlinedTextField(
@@ -386,23 +394,23 @@ fun PosScreen(
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = KomandaTokens.AccentTertiary,
+                                focusedBorderColor = KomandaTokens.AccentTertiary.copy(alpha = 0.45f),
                                 unfocusedBorderColor = Zinc700,
-                                focusedContainerColor = Zinc800,
-                                unfocusedContainerColor = Zinc800,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
+                                focusedContainerColor = KomandaTokens.SurfaceDeep,
+                                unfocusedContainerColor = KomandaTokens.SurfaceDeep,
+                                focusedTextColor = KomandaTokens.TextPrimary,
+                                unfocusedTextColor = KomandaTokens.TextPrimary
                             ),
-                            shape = RoundedCornerShape(2.dp)
+                            shape = RoundedCornerShape(16.dp)
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
                             text = "Notas del pedido",
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Zinc300
+                            color = Zinc400
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         OutlinedTextField(
@@ -413,14 +421,14 @@ fun PosScreen(
                             maxLines = 4,
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = KomandaTokens.AccentTertiary,
+                                focusedBorderColor = KomandaTokens.AccentTertiary.copy(alpha = 0.45f),
                                 unfocusedBorderColor = Zinc700,
-                                focusedContainerColor = Zinc800,
-                                unfocusedContainerColor = Zinc800,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
+                                focusedContainerColor = KomandaTokens.SurfaceDeep,
+                                unfocusedContainerColor = KomandaTokens.SurfaceDeep,
+                                focusedTextColor = KomandaTokens.TextPrimary,
+                                unfocusedTextColor = KomandaTokens.TextPrimary
                             ),
-                            shape = RoundedCornerShape(2.dp)
+                            shape = RoundedCornerShape(16.dp)
                         )
                     }
                 }
@@ -439,9 +447,9 @@ fun DirectOrderCatalogItemRow(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onQuantityChange(quantity + 1) },
-        shape = RoundedCornerShape(2.dp),
-        colors = CardDefaults.cardColors(containerColor = Zinc800),
-        border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Zinc700))
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = KomandaTokens.SurfaceDeep),
+        border = BorderStroke(1.dp, if (quantity > 0) KomandaTokens.AccentTertiary.copy(alpha = 0.35f) else Zinc700)
     ) {
         Row(
             modifier = Modifier
@@ -455,7 +463,7 @@ fun DirectOrderCatalogItemRow(
                     text = item.name,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color.White
+                    color = KomandaTokens.TextPrimary
                 )
                 Text(
                     text = "$${item.price}",
@@ -471,7 +479,8 @@ fun DirectOrderCatalogItemRow(
                 OutlinedButton(
                     onClick = { onQuantityChange(quantity - 1) },
                     enabled = quantity > 0,
-                    shape = RoundedCornerShape(2.dp),
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, KomandaTokens.Border),
                     contentPadding = PaddingValues(0.dp),
                     modifier = Modifier.size(32.dp)
                 ) {
@@ -491,7 +500,8 @@ fun DirectOrderCatalogItemRow(
                 OutlinedButton(
                     onClick = { onQuantityChange(quantity + 1) },
                     enabled = quantity < 50,
-                    shape = RoundedCornerShape(2.dp),
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, KomandaTokens.Border),
                     contentPadding = PaddingValues(0.dp),
                     modifier = Modifier.size(32.dp)
                 ) {

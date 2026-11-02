@@ -127,13 +127,21 @@ fun OrdersDashboardScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (!tenantName.isNullOrBlank()) "Komanda POS - ${tenantName.uppercase()}" else "Komanda Business",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp,
-                            color = Color.White
+                            text = "OPERACIÓN EN VIVO",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.12.em,
+                            color = Zinc400
                         )
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = if (!tenantName.isNullOrBlank()) "Komanda POS · $tenantName" else "Komanda POS",
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = (-0.02).em,
+                            color = KomandaTokens.TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "Los cambios se reciben por eventos incrementales del tenant activo.",
                             fontSize = 14.sp,
@@ -149,9 +157,9 @@ fun OrdersDashboardScreen(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .background(Zinc900, RoundedCornerShape(2.dp))
-                                .border(1.dp, Zinc800, RoundedCornerShape(2.dp))
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                                .background(Zinc900, CircleShape)
+                                .border(1.dp, KomandaTokens.Border, CircleShape)
+                                .padding(horizontal = 14.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 text = "Impresión Automática",
@@ -159,7 +167,7 @@ fun OrdersDashboardScreen(
                                 fontWeight = FontWeight.Medium,
                                 color = if (masterAutoPrint) KomandaTokens.AccentTertiary else Zinc400
                             )
-                            Spacer(modifier = Modifier.width(6.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Switch(
                                 checked = masterAutoPrint,
                                 onCheckedChange = { orderManager.setMasterAutoPrint(it) },
@@ -173,28 +181,40 @@ fun OrdersDashboardScreen(
                         }
 
                         if (onNavigateToPrinterSettings != null) {
-                            IconButton(onClick = onNavigateToPrinterSettings) {
-                                Icon(Icons.Default.Settings, contentDescription = "Configurar Impresoras", tint = Zinc400)
+                            IconButton(
+                                onClick = onNavigateToPrinterSettings,
+                                modifier = Modifier
+                                    .background(KomandaTokens.SurfacePill, CircleShape)
+                                    .border(1.dp, KomandaTokens.Border, CircleShape)
+                            ) {
+                                Icon(Icons.Default.Settings, contentDescription = "Configurar Impresoras", tint = Zinc300)
                             }
                         }
 
                         IconButton(
-                            onClick = { orderManager.refreshOrders() }
+                            onClick = { orderManager.refreshOrders() },
+                            modifier = Modifier
+                                .background(KomandaTokens.SurfacePill, CircleShape)
+                                .border(1.dp, KomandaTokens.Border, CircleShape)
                         ) {
-                            Icon(Icons.Default.Refresh, contentDescription = "Refrescar", tint = Zinc400)
+                            Icon(Icons.Default.Refresh, contentDescription = "Refrescar", tint = Zinc300)
                         }
 
                         if (onLogout != null) {
                             OutlinedButton(
                                 onClick = onLogout,
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Zinc400),
-                                shape = RoundedCornerShape(2.dp),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp)
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = KomandaTokens.SurfacePill,
+                                    contentColor = Zinc300
+                                ),
+                                border = BorderStroke(1.dp, KomandaTokens.Border),
+                                shape = CircleShape,
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
                             ) {
                                 Text(
                                     text = "Salir",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Normal
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
                         }
@@ -205,13 +225,13 @@ fun OrdersDashboardScreen(
                                 containerColor = KomandaTokens.AccentTertiary,
                                 contentColor = KomandaTokens.AccentPrimary
                             ),
-                            shape = RoundedCornerShape(2.dp),
-                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp)
+                            shape = CircleShape,
+                            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 11.dp)
                         ) {
                             Text(
                                 text = "Crear pedido directo",
                                 fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
@@ -222,11 +242,11 @@ fun OrdersDashboardScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(2.dp),
+                    shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = Zinc900),
-                    border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Zinc800))
+                    border = BorderStroke(1.25.dp, KomandaTokens.PrismRingBrush)
                 ) {
-                    Column(modifier = Modifier.padding(20.dp)) {
+                    Column(modifier = Modifier.padding(24.dp)) {
                         // Section Header: "Activos" / "{N} pedidos esperando entrega" + Connection badges
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -237,8 +257,8 @@ fun OrdersDashboardScreen(
                                 Text(
                                     text = "Activos",
                                     fontSize = 22.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
+                                    fontWeight = FontWeight.Medium,
+                                    color = KomandaTokens.TextPrimary
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
@@ -384,8 +404,8 @@ fun OrdersDashboardScreen(
                 onConfirm = {
                     scope.launch {
                         orderManager.voidUnpaidOrder(order, "unpaid_cash_voided_by_pos")
+                        orderToVoidUnpaid = null
                     }
-                    orderToVoidUnpaid = null
                 }
             )
         }
@@ -448,9 +468,9 @@ fun AdminDashboardOrderCard(
 ) {
     val isCashPending = order.isCashPending
     val isCashPaid = order.paymentStatus == "paid" && order.tender == "cash"
-    val cardBorderColor = if (isCashPending) Amber500 else Zinc800
+    val cardBorderColor = if (isCashPending) Amber500.copy(alpha = 0.55f) else KomandaTokens.Border
     val cardBorderWidth = if (isCashPending) 1.5.dp else 1.dp
-    val cardBgColor = if (isCashPending) Color(0xFF14120B) else Zinc950
+    val cardBgColor = if (isCashPending) Color(0xFF1A1610) else KomandaTokens.SurfaceDeep
 
     // Fuerza recomposición periódica para que el countdown de la orden
     // pendiente de efectivo no quede congelado.
@@ -465,7 +485,7 @@ fun AdminDashboardOrderCard(
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(2.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = cardBgColor),
         border = BorderStroke(cardBorderWidth, cardBorderColor)
     ) {
@@ -568,8 +588,8 @@ fun AdminDashboardOrderCard(
                     if (isCashPending) {
                         Box(
                             modifier = Modifier
-                                .background(Amber500.copy(alpha = 0.15f), RoundedCornerShape(4.dp))
-                                .border(1.5.dp, Amber500, RoundedCornerShape(4.dp))
+                                .background(Amber500.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+                                .border(1.5.dp, Amber500, RoundedCornerShape(12.dp))
                                 .padding(horizontal = 14.dp, vertical = 6.dp)
                         ) {
                             Text(
@@ -615,8 +635,8 @@ fun AdminDashboardOrderCard(
 
                         Box(
                             modifier = Modifier
-                                .background(statusBgColor, RoundedCornerShape(4.dp))
-                                .border(1.5.dp, statusBorderColor, RoundedCornerShape(4.dp))
+                                .background(statusBgColor, RoundedCornerShape(12.dp))
+                                .border(1.5.dp, statusBorderColor, RoundedCornerShape(12.dp))
                                 .padding(horizontal = 14.dp, vertical = 6.dp)
                         ) {
                             Text(
@@ -657,18 +677,18 @@ fun AdminDashboardOrderCard(
                                     containerColor = Amber500,
                                     contentColor = Zinc950
                                 ),
-                                shape = RoundedCornerShape(2.dp),
+                                shape = CircleShape,
                                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp)
                             ) {
                                 Text(
                                     text = "Cobrar en Efectivo",
                                     fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                             OutlinedButton(
                                 onClick = onVoidUnpaid,
-                                shape = RoundedCornerShape(2.dp),
+                                shape = CircleShape,
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Red400),
                                 border = BorderStroke(1.dp, Red400.copy(alpha = 0.6f)),
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
@@ -676,7 +696,7 @@ fun AdminDashboardOrderCard(
                                 Text(
                                     text = "Anular Pedido Impago",
                                     fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
                         }
@@ -693,20 +713,20 @@ fun AdminDashboardOrderCard(
                                     containerColor = btnBgColor,
                                     contentColor = btnFgColor
                                 ),
-                                shape = RoundedCornerShape(2.dp),
+                                shape = CircleShape,
                                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp)
                             ) {
                                 Text(
                                     text = if (isTransitioning) "Actualizando..." else nextLabel,
                                     fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold
+                                    fontWeight = FontWeight.SemiBold
                                 )
                             }
                         }
                         if (isCashPaid) {
                             OutlinedButton(
                                 onClick = onRefundCash,
-                                shape = RoundedCornerShape(2.dp),
+                                shape = CircleShape,
                                 colors = ButtonDefaults.outlinedButtonColors(contentColor = Red400),
                                 border = BorderStroke(1.dp, Red400.copy(alpha = 0.6f)),
                                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
@@ -714,7 +734,7 @@ fun AdminDashboardOrderCard(
                                 Text(
                                     text = "Cancelar y Devolver Efectivo",
                                     fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    fontWeight = FontWeight.Medium
                                 )
                             }
                         }
@@ -723,8 +743,10 @@ fun AdminDashboardOrderCard(
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         OutlinedButton(
                             onClick = onPrint,
-                            shape = RoundedCornerShape(2.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                            shape = CircleShape,
+                            border = BorderStroke(1.dp, KomandaTokens.Border),
+                            colors = ButtonDefaults.outlinedButtonColors(containerColor = KomandaTokens.SurfacePill),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                         ) {
                             Icon(Icons.Default.Print, contentDescription = "Ticket", tint = Zinc300, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -733,8 +755,10 @@ fun AdminDashboardOrderCard(
 
                         OutlinedButton(
                             onClick = onInvoice,
-                            shape = RoundedCornerShape(2.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                            shape = CircleShape,
+                            border = BorderStroke(1.dp, KomandaTokens.Border),
+                            colors = ButtonDefaults.outlinedButtonColors(containerColor = KomandaTokens.SurfacePill),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                         ) {
                             Icon(Icons.Default.Receipt, contentDescription = "AFIP", tint = Zinc300, modifier = Modifier.size(16.dp))
                             Spacer(modifier = Modifier.width(4.dp))
@@ -743,8 +767,10 @@ fun AdminDashboardOrderCard(
 
                         OutlinedButton(
                             onClick = onCall,
-                            shape = RoundedCornerShape(2.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp)
+                            shape = CircleShape,
+                            border = BorderStroke(1.dp, KomandaTokens.Border),
+                            colors = ButtonDefaults.outlinedButtonColors(containerColor = KomandaTokens.SurfacePill),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp)
                         ) {
                             Spacer(modifier = Modifier.width(4.dp))
                             Text("VOZ", fontSize = 12.sp, color = Zinc300)
@@ -759,12 +785,12 @@ fun AdminDashboardOrderCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Zinc900, RoundedCornerShape(2.dp))
-                        .border(1.dp, Zinc800, RoundedCornerShape(2.dp))
+                        .background(Zinc900, RoundedCornerShape(14.dp))
+                        .border(1.dp, KomandaTokens.BorderSubtle, RoundedCornerShape(14.dp))
                         .padding(12.dp)
                 ) {
                     Column {
-                        Text(text = "Notas", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = Zinc100)
+                        Text(text = "Notas", fontWeight = FontWeight.Medium, fontSize = 13.sp, color = Zinc100)
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(text = order.notes, fontSize = 13.sp, color = Zinc300)
                     }
@@ -777,9 +803,9 @@ fun AdminDashboardOrderCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Zinc900, RoundedCornerShape(2.dp))
-                        .border(1.dp, Zinc800, RoundedCornerShape(2.dp))
-                        .padding(14.dp)
+                        .background(Zinc900, RoundedCornerShape(16.dp))
+                        .border(1.dp, KomandaTokens.BorderSubtle, RoundedCornerShape(16.dp))
+                        .padding(16.dp)
                 ) {
                     Column {
                         Text(text = "Productos", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Zinc100)
@@ -876,12 +902,13 @@ fun VoidUnpaidOrderDialog(
     var confirmed by remember { mutableStateOf(false) }
     AlertDialog(
         onDismissRequest = { if (!confirmed) onDismiss() },
+        shape = RoundedCornerShape(24.dp),
         title = {
             Text(
                 text = "Anular Pedido Impago — Compra #${order.purchaseNumber}",
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
+                fontWeight = FontWeight.Medium,
+                color = KomandaTokens.TextPrimary
             )
         },
         text = {
@@ -900,9 +927,9 @@ fun VoidUnpaidOrderDialog(
                 },
                 enabled = !confirmed,
                 colors = ButtonDefaults.buttonColors(containerColor = Red400, contentColor = Color.White),
-                shape = RoundedCornerShape(2.dp)
+                shape = CircleShape
             ) {
-                Text("Sí, anular", fontWeight = FontWeight.Bold)
+                Text("Sí, anular", fontWeight = FontWeight.Medium)
             }
         },
         dismissButton = {
@@ -923,12 +950,13 @@ private fun PrintTargetDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(24.dp),
         title = {
             Text(
                 text = "Imprimir Comanda — Compra #${order.purchaseNumber}",
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
+                fontWeight = FontWeight.Medium,
+                color = KomandaTokens.TextPrimary
             )
         },
         text = {
@@ -956,9 +984,13 @@ private fun PrintTargetDialog(
                         OutlinedButton(
                             onClick = { onSelectPrinter(p.id) },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(2.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.White),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, KomandaTokens.Border),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = KomandaTokens.SurfaceDeep,
+                                contentColor = KomandaTokens.TextPrimary
+                            ),
+                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
                         ) {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -975,10 +1007,10 @@ private fun PrintTargetDialog(
                         Button(
                             onClick = { onSelectPrinter("ALL") },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(2.dp),
+                            shape = CircleShape,
                             colors = ButtonDefaults.buttonColors(containerColor = KomandaTokens.AccentTertiary, contentColor = KomandaTokens.AccentPrimary)
                         ) {
-                            Text("Todas las impresoras activas", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("Todas las impresoras activas", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                         }
                     }
                 }
@@ -1008,12 +1040,13 @@ fun CollectCashDialog(
 
     AlertDialog(
         onDismissRequest = { if (!isLoading) onDismiss() },
+        shape = RoundedCornerShape(24.dp),
         title = {
             Text(
                 text = "Cobrar en Efectivo — Compra #${order.purchaseNumber}",
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
+                fontWeight = FontWeight.Medium,
+                color = KomandaTokens.TextPrimary
             )
         },
         text = {
@@ -1025,8 +1058,8 @@ fun CollectCashDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Zinc950, RoundedCornerShape(4.dp))
-                        .border(1.dp, Amber500.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
+                        .background(KomandaTokens.SurfaceDeep, RoundedCornerShape(16.dp))
+                        .border(1.dp, Amber500.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
                         .padding(vertical = 12.dp, horizontal = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -1067,19 +1100,19 @@ fun CollectCashDialog(
                             errorMessage = null
                         },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(2.dp),
+                        shape = CircleShape,
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = if (isPin) Amber500.copy(alpha = 0.15f) else Color.Transparent,
                             contentColor = if (isPin) Amber400 else Zinc400
                         ),
-                        border = BorderStroke(1.dp, if (isPin) Amber500 else Zinc800),
+                        border = BorderStroke(1.dp, if (isPin) Amber500 else Zinc700),
                         enabled = !isLoading,
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
                     ) {
                         Text(
                             text = "PIN del Pedido",
                             fontSize = 13.sp,
-                            fontWeight = if (isPin) FontWeight.Bold else FontWeight.Normal
+                            fontWeight = if (isPin) FontWeight.SemiBold else FontWeight.Normal
                         )
                     }
 
@@ -1089,19 +1122,19 @@ fun CollectCashDialog(
                             errorMessage = null
                         },
                         modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(2.dp),
+                        shape = CircleShape,
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = if (isAccount) Amber500.copy(alpha = 0.15f) else Color.Transparent,
                             contentColor = if (isAccount) Amber400 else Zinc400
                         ),
-                        border = BorderStroke(1.dp, if (isAccount) Amber500 else Zinc800),
+                        border = BorderStroke(1.dp, if (isAccount) Amber500 else Zinc700),
                         enabled = !isLoading,
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp)
                     ) {
                         Text(
                             text = "Confirmar con mi Cuenta",
                             fontSize = 13.sp,
-                            fontWeight = if (isAccount) FontWeight.Bold else FontWeight.Normal
+                            fontWeight = if (isAccount) FontWeight.SemiBold else FontWeight.Normal
                         )
                     }
                 }
@@ -1117,6 +1150,7 @@ fun CollectCashDialog(
                                     errorMessage = null
                                 }
                             },
+                            shape = RoundedCornerShape(16.dp),
                             label = { Text("PIN de 4 dígitos") },
                             placeholder = { Text("Ej: 1234", color = Zinc600) },
                             singleLine = true,
@@ -1125,8 +1159,10 @@ fun CollectCashDialog(
                                 imeAction = ImeAction.Done
                             ),
                             colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = KomandaTokens.SurfaceDeep,
+                                unfocusedContainerColor = KomandaTokens.SurfaceDeep,
                                 focusedBorderColor = Amber400,
-                                unfocusedBorderColor = Zinc800,
+                                unfocusedBorderColor = Zinc700,
                                 focusedLabelColor = Amber400,
                                 unfocusedLabelColor = Zinc400,
                                 cursorColor = Amber400,
@@ -1146,8 +1182,8 @@ fun CollectCashDialog(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Zinc950, RoundedCornerShape(2.dp))
-                            .border(1.dp, Zinc800, RoundedCornerShape(2.dp))
+                            .background(KomandaTokens.SurfaceDeep, RoundedCornerShape(14.dp))
+                            .border(1.dp, Zinc700, RoundedCornerShape(14.dp))
                             .padding(12.dp)
                     ) {
                         Text(
@@ -1163,8 +1199,8 @@ fun CollectCashDialog(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Red400.copy(alpha = 0.1f), RoundedCornerShape(2.dp))
-                            .border(1.dp, Red400.copy(alpha = 0.4f), RoundedCornerShape(2.dp))
+                            .background(Red400.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                            .border(1.dp, Red400.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                             .padding(10.dp)
                     ) {
                         Text(
@@ -1209,13 +1245,13 @@ fun CollectCashDialog(
                     disabledContainerColor = Zinc800,
                     disabledContentColor = Zinc600
                 ),
-                shape = RoundedCornerShape(2.dp),
+                shape = CircleShape,
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Text(
                     text = if (isLoading) "Procesando cobro..." else "Confirmar Cobro",
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.SemiBold
                 )
             }
         },
@@ -1245,12 +1281,13 @@ fun RefundCashDialog(
 
     AlertDialog(
         onDismissRequest = { if (!isLoading) onDismiss() },
+        shape = RoundedCornerShape(24.dp),
         title = {
             Text(
                 text = "Cancelar y Devolver Efectivo — Compra #${order.purchaseNumber}",
                 fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
+                fontWeight = FontWeight.Medium,
+                color = KomandaTokens.TextPrimary
             )
         },
         text = {
@@ -1261,8 +1298,8 @@ fun RefundCashDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Zinc950, RoundedCornerShape(4.dp))
-                        .border(1.dp, Red400.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
+                        .background(KomandaTokens.SurfaceDeep, RoundedCornerShape(16.dp))
+                        .border(1.dp, Red400.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
                         .padding(vertical = 12.dp, horizontal = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
@@ -1282,13 +1319,16 @@ fun RefundCashDialog(
                         reason = it
                         errorMessage = null
                     },
+                    shape = RoundedCornerShape(16.dp),
                     label = { Text("Motivo de cancelación") },
                     placeholder = { Text("Ej: Sin stock, error operativo, reclamo", color = Zinc600) },
                     singleLine = false,
                     minLines = 2,
                     colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = KomandaTokens.SurfaceDeep,
+                        unfocusedContainerColor = KomandaTokens.SurfaceDeep,
                         focusedBorderColor = Red400,
-                        unfocusedBorderColor = Zinc800,
+                        unfocusedBorderColor = Zinc700,
                         focusedLabelColor = Red400,
                         unfocusedLabelColor = Zinc400,
                         cursorColor = Red400,
@@ -1302,12 +1342,15 @@ fun RefundCashDialog(
                 OutlinedTextField(
                     value = operatorNote,
                     onValueChange = { operatorNote = it },
+                    shape = RoundedCornerShape(16.dp),
                     label = { Text("Nota del operador (opcional)") },
                     singleLine = false,
                     minLines = 1,
                     colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = KomandaTokens.SurfaceDeep,
+                        unfocusedContainerColor = KomandaTokens.SurfaceDeep,
                         focusedBorderColor = Zinc400,
-                        unfocusedBorderColor = Zinc800,
+                        unfocusedBorderColor = Zinc700,
                         focusedLabelColor = Zinc400,
                         unfocusedLabelColor = Zinc400,
                         cursorColor = Zinc400,
@@ -1322,8 +1365,8 @@ fun RefundCashDialog(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Red400.copy(alpha = 0.1f), RoundedCornerShape(2.dp))
-                            .border(1.dp, Red400.copy(alpha = 0.4f), RoundedCornerShape(2.dp))
+                            .background(Red400.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                            .border(1.dp, Red400.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                             .padding(10.dp)
                     ) {
                         Text(
@@ -1364,13 +1407,13 @@ fun RefundCashDialog(
                     disabledContainerColor = Zinc800,
                     disabledContentColor = Zinc600
                 ),
-                shape = RoundedCornerShape(2.dp),
+                shape = CircleShape,
                 contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Text(
                     text = if (isLoading) "Procesando devolución..." else "Confirmar Devolución",
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold
+                    fontWeight = FontWeight.Medium
                 )
             }
         },

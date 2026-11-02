@@ -19,59 +19,59 @@ val InstrumentSansFontFamily = FontFamily(
 val Typography = Typography(
     displayLarge = TextStyle(
         fontFamily = InstrumentSansFontFamily,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.Medium,
         fontSize = 64.sp,
         lineHeight = 72.sp,
-        letterSpacing = (-0.02).em
+        letterSpacing = (-0.03).em
     ),
     displayMedium = TextStyle(
         fontFamily = InstrumentSansFontFamily,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.Medium,
         fontSize = 48.sp,
         lineHeight = 54.sp,
-        letterSpacing = (-0.02).em
+        letterSpacing = (-0.03).em
     ),
     displaySmall = TextStyle(
         fontFamily = InstrumentSansFontFamily,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.Medium,
         fontSize = 38.sp,
         lineHeight = 44.sp,
         letterSpacing = (-0.02).em
     ),
     headlineLarge = TextStyle(
         fontFamily = InstrumentSansFontFamily,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.Medium,
         fontSize = 34.sp,
         lineHeight = 40.sp,
         letterSpacing = (-0.02).em
     ),
     headlineMedium = TextStyle(
         fontFamily = InstrumentSansFontFamily,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.Medium,
         fontSize = 28.sp,
         lineHeight = 34.sp,
         letterSpacing = (-0.02).em
     ),
     headlineSmall = TextStyle(
         fontFamily = InstrumentSansFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Medium,
         fontSize = 24.sp,
         lineHeight = 30.sp,
-        letterSpacing = (-0.01).em
+        letterSpacing = (-0.015).em
     ),
     titleLarge = TextStyle(
         fontFamily = InstrumentSansFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Medium,
         fontSize = 22.sp,
         lineHeight = 28.sp,
-        letterSpacing = 0.sp
+        letterSpacing = (-0.01).em
     ),
     titleMedium = TextStyle(
         fontFamily = InstrumentSansFontFamily,
-        fontWeight = FontWeight.SemiBold,
+        fontWeight = FontWeight.Medium,
         fontSize = 18.sp,
         lineHeight = 24.sp,
-        letterSpacing = 0.sp
+        letterSpacing = (-0.01).em
     ),
     titleSmall = TextStyle(
         fontFamily = InstrumentSansFontFamily,
