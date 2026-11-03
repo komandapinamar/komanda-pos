@@ -214,4 +214,102 @@ class AdminDashboardOrderTest {
         assertTrue(order.isCashPending)
         assertEquals("Efectivo Storefront", AdminDashboardOrder.sourceLabel(order.source))
     }
+
+    @Test
+    fun `aggregateKitchenProducts sums products across paid kitchen orders and excludes unpaid or ready orders`() {
+        val kitchenOrder1 = AdminDashboardOrder(
+            id = "ord_k1",
+            purchaseNumber = "51",
+            status = "approved",
+            paymentStatus = "paid",
+            customer = CustomerInfo(name = "Cliente 1"),
+            lines = listOf(
+                AdminDashboardLine(
+                    id = "l1",
+                    name = "Pollo Sisu",
+                    quantity = 2,
+                    unitPrice = "4500.00",
+                    lineTotal = "9000.00",
+                    note = "Bien crocante",
+                    options = listOf(AdminDashboardLineOption(name = "Salsa Picante", priceDelta = "500.00", quantity = 1))
+                ),
+                AdminDashboardLine(
+                    id = "l2",
+                    name = "Cookie",
+                    quantity = 1,
+                    unitPrice = "2500.00",
+                    lineTotal = "2500.00"
+                )
+            ),
+            createdAt = "2026-10-05T12:00:00Z",
+            updatedAt = "2026-10-05T12:00:00Z"
+        )
+
+        val kitchenOrder2 = kitchenOrder1.copy(
+            id = "ord_k2",
+            purchaseNumber = "52",
+            status = "preparing",
+            lines = listOf(
+                AdminDashboardLine(
+                    id = "l3",
+                    name = "Pollo Sisu",
+                    quantity = 3,
+                    unitPrice = "4500.00",
+                    lineTotal = "13500.00",
+                    options = listOf(AdminDashboardLineOption(name = "Salsa Picante", priceDelta = "500.00", quantity = 1))
+                )
+            )
+        )
+
+        val unpaidOrder = kitchenOrder1.copy(
+            id = "ord_unpaid",
+            purchaseNumber = "53",
+            paymentStatus = "pending",
+            tender = "cash",
+            lines = listOf(
+                AdminDashboardLine(
+                    id = "l4",
+                    name = "Pollo Sisu",
+                    quantity = 10,
+                    unitPrice = "4500.00",
+                    lineTotal = "45000.00"
+                )
+            )
+        )
+
+        val readyOrder = kitchenOrder1.copy(
+            id = "ord_ready",
+            purchaseNumber = "54",
+            status = "ready",
+            lines = listOf(
+                AdminDashboardLine(
+                    id = "l5",
+                    name = "Quesadillas",
+                    quantity = 4,
+                    unitPrice = "5000.00",
+                    lineTotal = "20000.00"
+                )
+            )
+        )
+
+        assertTrue(kitchenOrder1.isInKitchenStage)
+        assertTrue(kitchenOrder2.isInKitchenStage)
+        assertFalse(unpaidOrder.isInKitchenStage)
+        assertFalse(readyOrder.isInKitchenStage)
+
+        val totals = AdminDashboardOrder.aggregateKitchenProducts(
+            listOf(kitchenOrder1, kitchenOrder2, unpaidOrder, readyOrder)
+        )
+
+        assertEquals(2, totals.size)
+        assertEquals("Pollo Sisu", totals[0].name)
+        assertEquals(5, totals[0].totalQuantity)
+        assertEquals(2, totals[0].orderCount)
+        assertEquals(listOf(KitchenOptionAggregate(name = "Salsa Picante", quantity = 5)), totals[0].options)
+        assertEquals(listOf("#51: Bien crocante"), totals[0].notes)
+
+        assertEquals("Cookie", totals[1].name)
+        assertEquals(1, totals[1].totalQuantity)
+        assertEquals(1, totals[1].orderCount)
+    }
 }

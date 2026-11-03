@@ -41,6 +41,20 @@ data class AdminDashboardLine(
     val options: List<AdminDashboardLineOption> = emptyList()
 )
 
+data class KitchenOptionAggregate(
+    val name: String,
+    val quantity: Int
+)
+
+data class KitchenProductAggregate(
+    val key: String,
+    val name: String,
+    val totalQuantity: Int,
+    val orderCount: Int,
+    val options: List<KitchenOptionAggregate> = emptyList(),
+    val notes: List<String> = emptyList()
+)
+
 @JsonClass(generateAdapter = true)
 data class AdminDashboardOrder(
     val id: String,
@@ -69,6 +83,11 @@ data class AdminDashboardOrder(
                 status != OrderStatuses.DELIVERED &&
                 paymentStatus == "pending" &&
                 (tender == "cash" || source == "storefront_cash" || source == "storefront-cash")
+
+    val isInKitchenStage: Boolean
+        get() = !isCashPending &&
+                paymentStatus == "paid" &&
+                (status == OrderStatuses.APPROVED || status == OrderStatuses.PREPARING)
 
     fun minutesRemaining(nowMillis: Long = System.currentTimeMillis()): Long? {
         if (paymentExpiresAt.isNullOrBlank()) return null
@@ -168,6 +187,67 @@ data class AdminDashboardOrder(
                 OrderStatuses.DELIVERED -> "Entregado"
                 else -> null
             }
+        }
+
+        fun aggregateKitchenProducts(orders: List<AdminDashboardOrder>): List<KitchenProductAggregate> {
+            class MutableProductEntry(
+                val key: String,
+                val name: String,
+                var totalQuantity: Int = 0,
+                val orderIds: MutableSet<String> = mutableSetOf(),
+                val options: MutableMap<String, Pair<String, Int>> = linkedMapOf(),
+                val notes: MutableList<String> = mutableListOf()
+            )
+
+            val map = linkedMapOf<String, MutableProductEntry>()
+
+            for (order in orders) {
+                if (!order.isInKitchenStage) continue
+                for (line in order.lines) {
+                    val trimmedName = line.name.trim()
+                    if (trimmedName.isEmpty() || line.quantity <= 0) continue
+                    val key = trimmedName.lowercase(Locale.ROOT)
+
+                    val entry = map.getOrPut(key) {
+                        MutableProductEntry(key = key, name = trimmedName)
+                    }
+                    entry.totalQuantity += line.quantity
+                    entry.orderIds.add(order.id)
+
+                    val cleanNote = line.note?.trim()
+                    if (!cleanNote.isNullOrEmpty()) {
+                        entry.notes.add("#${order.purchaseNumber}: $cleanNote")
+                    }
+
+                    for (opt in line.options) {
+                        val optName = opt.name.trim()
+                        if (optName.isEmpty()) continue
+                        val optKey = optName.lowercase(Locale.ROOT)
+                        val optQty = line.quantity * opt.quantity.coerceAtLeast(1)
+                        val existing = entry.options[optKey]
+                        if (existing != null) {
+                            entry.options[optKey] = existing.first to (existing.second + optQty)
+                        } else {
+                            entry.options[optKey] = optName to optQty
+                        }
+                    }
+                }
+            }
+
+            return map.values
+                .map { entry ->
+                    KitchenProductAggregate(
+                        key = entry.key,
+                        name = entry.name,
+                        totalQuantity = entry.totalQuantity,
+                        orderCount = entry.orderIds.size,
+                        options = entry.options.values
+                            .map { (name, qty) -> KitchenOptionAggregate(name = name, quantity = qty) }
+                            .sortedWith(compareByDescending<KitchenOptionAggregate> { it.quantity }.thenBy { it.name.lowercase(Locale.ROOT) }),
+                        notes = entry.notes.toList()
+                    )
+                }
+                .sortedWith(compareByDescending<KitchenProductAggregate> { it.totalQuantity }.thenBy { it.name.lowercase(Locale.ROOT) })
         }
 
         fun formatDate(value: String?): String {

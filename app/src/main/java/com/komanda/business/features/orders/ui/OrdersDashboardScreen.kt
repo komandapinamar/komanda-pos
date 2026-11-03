@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.komanda.business.core.model.AdminDashboardOrder
+import com.komanda.business.core.model.KitchenProductAggregate
 import com.komanda.business.core.model.OrderStatuses
 import com.komanda.business.core.network.ConnectionState
 import com.komanda.business.features.billing.BillingService
@@ -105,8 +106,12 @@ fun OrdersDashboardScreen(
     var orderToCollectCash by remember { mutableStateOf<AdminDashboardOrder?>(null) }
     var orderToRefundCash by remember { mutableStateOf<AdminDashboardOrder?>(null) }
     var orderToVoidUnpaid by remember { mutableStateOf<AdminDashboardOrder?>(null) }
+    var isKitchenMode by remember { mutableStateOf(false) }
     val masterAutoPrint by orderManager.masterAutoPrintEnabled.collectAsState()
     val configuredPrinters by orderManager.configuredPrinters.collectAsState()
+    val kitchenOrders = remember(orders) { orders.filter { it.isInKitchenStage } }
+    val kitchenProductTotals = remember(orders) { AdminDashboardOrder.aggregateKitchenProducts(orders) }
+    val totalKitchenUnits = remember(kitchenProductTotals) { kitchenProductTotals.sumOf { it.totalQuantity } }
 
     Scaffold(
         containerColor = Zinc950
@@ -255,14 +260,18 @@ fun OrdersDashboardScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "Activos",
+                                    text = if (isKitchenMode) "Modo cocina" else "Activos",
                                     fontSize = 22.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = KomandaTokens.TextPrimary
                                 )
                                 Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "${orders.size} pedido${if (orders.size == 1) "" else "s"} esperando entrega.",
+                                    text = if (isKitchenMode) {
+                                        "$totalKitchenUnits ${if (totalKitchenUnits == 1) "unidad" else "unidades"} en ${kitchenOrders.size} ${if (kitchenOrders.size == 1) "ticket" else "tickets"} · Sin precios"
+                                    } else {
+                                        "${orders.size} pedido${if (orders.size == 1) "" else "s"} esperando entrega."
+                                    },
                                     fontSize = 14.sp,
                                     color = Zinc400
                                 )
@@ -272,6 +281,26 @@ fun OrdersDashboardScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
+                                Button(
+                                    onClick = { isKitchenMode = !isKitchenMode },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (isKitchenMode) KomandaTokens.StatusReadyBg else KomandaTokens.SurfacePill,
+                                        contentColor = if (isKitchenMode) KomandaTokens.StatusReady else KomandaTokens.TextPrimary
+                                    ),
+                                    border = BorderStroke(
+                                        1.dp,
+                                        if (isKitchenMode) KomandaTokens.StatusReady else KomandaTokens.Border
+                                    ),
+                                    shape = CircleShape,
+                                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        text = if (isKitchenMode) "Salir de Modo cocina" else "Modo cocina",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                }
+
                                 ConnectionBadge(connectionState = connectionState)
 
                                 if (lastUpdatedAt != null) {
@@ -305,6 +334,15 @@ fun OrdersDashboardScreen(
                         }
                         if (orders.isEmpty() && snapshotState == SnapshotState.Loading) {
                             Text("Cargando pedidos...", color = Zinc300, modifier = Modifier.padding(vertical = 40.dp))
+                        } else if (isKitchenMode) {
+                            KitchenModeSplitSection(
+                                productTotals = kitchenProductTotals,
+                                totalUnits = totalKitchenUnits,
+                                kitchenOrders = kitchenOrders,
+                                transitioningOrderId = transitioningOrderId,
+                                onTransitionOrder = { orderManager.transitionOrder(it) },
+                                onPrintOrder = { orderToPrint = it }
+                            )
                         } else if (orders.isEmpty() && snapshotState == SnapshotState.Ready) {
                             Column(
                                 modifier = Modifier
@@ -408,6 +446,414 @@ fun OrdersDashboardScreen(
                     }
                 }
             )
+        }
+    }
+}
+
+@Composable
+fun KitchenModeSplitSection(
+    productTotals: List<KitchenProductAggregate>,
+    totalUnits: Int,
+    kitchenOrders: List<AdminDashboardOrder>,
+    transitioningOrderId: String?,
+    onTransitionOrder: (AdminDashboardOrder) -> Unit,
+    onPrintOrder: (AdminDashboardOrder) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        // Mitad 1: Total de productos (sin separar por ticket)
+        Card(
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = KomandaTokens.SurfaceDeep),
+            border = BorderStroke(1.dp, KomandaTokens.Border)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Total de productos",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = KomandaTokens.TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Suma total a preparar en cocina",
+                            fontSize = 12.sp,
+                            color = Zinc400
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .background(KomandaTokens.StatusReadyBg, CircleShape)
+                            .border(1.dp, KomandaTokens.StatusReady, CircleShape)
+                            .padding(horizontal = 12.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = "$totalUnits un.",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace,
+                            color = KomandaTokens.StatusReady
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = Zinc800)
+                Spacer(modifier = Modifier.height(14.dp))
+
+                if (productTotals.isEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "No hay productos en preparación.",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Los productos de pedidos pagados se sumarán acá.",
+                            fontSize = 13.sp,
+                            color = Zinc400
+                        )
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        productTotals.forEach { product ->
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Zinc900, RoundedCornerShape(14.dp))
+                                    .border(1.dp, KomandaTokens.BorderSubtle, RoundedCornerShape(14.dp))
+                                    .padding(14.dp)
+                            ) {
+                                Column {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .background(Color.White, RoundedCornerShape(10.dp))
+                                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = "${product.totalQuantity}x",
+                                                fontSize = 18.sp,
+                                                fontWeight = FontWeight.Black,
+                                                fontFamily = FontFamily.Monospace,
+                                                color = Zinc950
+                                            )
+                                        }
+                                        Column {
+                                            Text(
+                                                text = product.name,
+                                                fontSize = 17.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color.White
+                                            )
+                                            Text(
+                                                text = "En ${product.orderCount} ${if (product.orderCount == 1) "ticket" else "tickets"}",
+                                                fontSize = 12.sp,
+                                                color = Zinc400
+                                            )
+                                        }
+                                    }
+
+                                    if (product.options.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Column(
+                                            modifier = Modifier.padding(start = 8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            product.options.forEach { opt ->
+                                                Text(
+                                                    text = "+ ${opt.quantity}x ${opt.name}",
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = Zinc300
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    if (product.notes.isNotEmpty()) {
+                                        Spacer(modifier = Modifier.height(8.dp))
+                                        Column(
+                                            modifier = Modifier.padding(start = 8.dp),
+                                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            product.notes.forEach { note ->
+                                                Text(
+                                                    text = "Nota $note",
+                                                    fontSize = 12.sp,
+                                                    color = Amber400
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Mitad 2: Tickets en cocina
+        Card(
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = KomandaTokens.SurfaceDeep),
+            border = BorderStroke(1.dp, KomandaTokens.Border)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Tickets en cocina",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = KomandaTokens.TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Detalle de productos por comanda",
+                            fontSize = 12.sp,
+                            color = Zinc400
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .border(1.dp, Zinc700, CircleShape)
+                            .padding(horizontal = 12.dp, vertical = 5.dp)
+                    ) {
+                        Text(
+                            text = "${kitchenOrders.size} ${if (kitchenOrders.size == 1) "ticket" else "tickets"}",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            fontFamily = FontFamily.Monospace,
+                            color = Zinc300
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+                HorizontalDivider(color = Zinc800)
+                Spacer(modifier = Modifier.height(14.dp))
+
+                if (kitchenOrders.isEmpty()) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 32.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "No hay tickets pendientes en cocina.",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Cuando ingrese un pedido pagado aparecerá acá.",
+                            fontSize = 13.sp,
+                            color = Zinc400
+                        )
+                    }
+                } else {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        kitchenOrders.forEach { order ->
+                            KitchenTicketCard(
+                                order = order,
+                                isTransitioning = transitioningOrderId == order.id,
+                                onTransition = { onTransitionOrder(order) },
+                                onPrint = { onPrintOrder(order) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun KitchenTicketCard(
+    order: AdminDashboardOrder,
+    isTransitioning: Boolean,
+    onTransition: () -> Unit,
+    onPrint: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Zinc900),
+        border = BorderStroke(1.dp, KomandaTokens.BorderSubtle)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .background(Color.White, CircleShape)
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = "Compra #${order.purchaseNumber}",
+                                color = Zinc950,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .background(KomandaTokens.StatusPreparingBg, CircleShape)
+                                .border(1.dp, KomandaTokens.StatusPreparing, CircleShape)
+                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                text = AdminDashboardOrder.statusLabel(order.status).uppercase(),
+                                color = KomandaTokens.StatusPreparing,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = order.customer.name,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "Aprobado: ${AdminDashboardOrder.formatDate(order.approvedAt ?: order.createdAt)}",
+                        fontSize = 12.sp,
+                        color = Zinc400
+                    )
+                }
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Button(
+                        onClick = onTransition,
+                        enabled = !isTransitioning,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = KomandaTokens.StatusReady,
+                            contentColor = Color.White
+                        ),
+                        shape = CircleShape,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
+                    ) {
+                        Text(
+                            text = if (isTransitioning) "Actualizando..." else "Listo para entregar",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+
+                    OutlinedButton(
+                        onClick = onPrint,
+                        shape = CircleShape,
+                        border = BorderStroke(1.dp, KomandaTokens.Border),
+                        colors = ButtonDefaults.outlinedButtonColors(containerColor = KomandaTokens.SurfacePill),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Icon(Icons.Default.Print, contentDescription = "Ticket", tint = Zinc300, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Ticket", fontSize = 11.sp, color = Zinc300)
+                    }
+                }
+            }
+
+            if (!order.notes.isNullOrBlank()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(KomandaTokens.SurfaceDeep, RoundedCornerShape(10.dp))
+                        .border(1.dp, Amber500.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                        .padding(10.dp)
+                ) {
+                    Column {
+                        Text(text = "Nota del pedido", fontWeight = FontWeight.SemiBold, fontSize = 12.sp, color = Amber400)
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(text = order.notes, fontSize = 12.sp, color = Zinc100)
+                    }
+                }
+            }
+
+            if (order.lines.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(KomandaTokens.SurfaceDeep, RoundedCornerShape(12.dp))
+                        .border(1.dp, KomandaTokens.BorderSubtle, RoundedCornerShape(12.dp))
+                        .padding(12.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        order.lines.forEach { line ->
+                            Column {
+                                Text(
+                                    text = "${line.quantity}x ${line.name}",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Zinc100
+                                )
+                                if (!line.note.isNullOrBlank()) {
+                                    Text(
+                                        text = "Nota: ${line.note}",
+                                        fontSize = 12.sp,
+                                        color = Amber400
+                                    )
+                                }
+                                line.options.forEach { opt ->
+                                    val qtyPrefix = if (opt.quantity > 1) "${opt.quantity}x " else ""
+                                    Text(
+                                        text = "+ $qtyPrefix${opt.name}",
+                                        fontSize = 12.sp,
+                                        color = Zinc300,
+                                        modifier = Modifier.padding(start = 12.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
