@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Cast
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Refresh
@@ -92,6 +93,8 @@ fun OrdersDashboardScreen(
     billingService: BillingService? = null,
     onNavigateToPos: () -> Unit,
     onNavigateToPrinterSettings: (() -> Unit)? = null,
+    onNavigateToProjectorSettings: (() -> Unit)? = null,
+    isProjectorPresenting: Boolean = false,
     tenantName: String? = null,
     onLogout: (() -> Unit)? = null,
     onCollectCash: ((AdminDashboardOrder) -> Unit)? = null
@@ -183,6 +186,35 @@ fun OrdersDashboardScreen(
                                     uncheckedTrackColor = Zinc800
                                 )
                             )
+                        }
+
+                        if (onNavigateToProjectorSettings != null) {
+                            OutlinedButton(
+                                onClick = onNavigateToProjectorSettings,
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    containerColor = if (isProjectorPresenting) KomandaTokens.StatusReadyBg else KomandaTokens.SurfacePill,
+                                    contentColor = if (isProjectorPresenting) Color(0xFF6EE7B7) else Zinc300
+                                ),
+                                border = BorderStroke(
+                                    1.dp,
+                                    if (isProjectorPresenting) KomandaTokens.StatusReady.copy(alpha = 0.45f) else KomandaTokens.Border
+                                ),
+                                shape = CircleShape,
+                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Cast,
+                                    contentDescription = "Proyector de Piso",
+                                    tint = if (isProjectorPresenting) Color(0xFF6EE7B7) else Zinc300,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isProjectorPresenting) "Proyector Activo" else "Proyector",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                         }
 
                         if (onNavigateToPrinterSettings != null) {
