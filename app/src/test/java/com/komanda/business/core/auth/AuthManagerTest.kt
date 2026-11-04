@@ -7,6 +7,8 @@ import com.komanda.business.core.network.CatalogCategoryDto
 import com.komanda.business.core.network.CatalogItemDto
 import com.komanda.business.core.network.CatalogResponse
 import com.komanda.business.core.network.CloseCashShiftRequest
+import com.komanda.business.core.network.CollectCashRequest
+import com.komanda.business.core.network.CollectCashResponse
 import com.komanda.business.core.network.CreateCatalogItemRequest
 import com.komanda.business.core.network.CreateDirectOrderRequest
 import com.komanda.business.core.network.CreateInvoiceRequest
@@ -18,6 +20,8 @@ import com.komanda.business.core.network.MobileLoginRequest
 import com.komanda.business.core.network.MobileLoginResponse
 import com.komanda.business.core.network.MobileTenantDto
 import com.komanda.business.core.network.MobileContextResponse
+import com.komanda.business.core.network.RefundCashRequest
+import com.komanda.business.core.network.RefundCashResponse
 import com.komanda.business.core.network.TenantOrderResponse
 import com.komanda.business.core.network.TenantOrdersListResponse
 import com.komanda.business.core.network.TransitionOrderRequest
@@ -122,6 +126,22 @@ class FakeKomandaApi : KomandaApi {
         shiftId: String,
         body: CloseCashShiftRequest
     ): Response<CashShiftDto> =
+        Response.error(500, "Unused".toResponseBody("application/json".toMediaType()))
+
+    override suspend fun refundCash(
+        tenantId: String,
+        orderId: String,
+        idempotencyKey: String,
+        body: RefundCashRequest
+    ): Response<RefundCashResponse> =
+        Response.error(500, "Unused".toResponseBody("application/json".toMediaType()))
+
+    override suspend fun collectCash(
+        tenantId: String,
+        orderId: String,
+        idempotencyKey: String,
+        body: CollectCashRequest
+    ): Response<CollectCashResponse> =
         Response.error(500, "Unused".toResponseBody("application/json".toMediaType()))
 }
 

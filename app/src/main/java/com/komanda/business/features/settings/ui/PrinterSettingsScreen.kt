@@ -1,6 +1,7 @@
 package com.komanda.business.features.settings.ui
 
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -64,6 +66,7 @@ import com.komanda.business.hardware.printing.PrinterRouter
 import com.komanda.business.hardware.printing.enums.PrinterType
 import com.komanda.business.ui.theme.Amber400
 import com.komanda.business.ui.theme.Emerald600
+import com.komanda.business.ui.theme.KomandaTokens
 import com.komanda.business.ui.theme.Red400
 import com.komanda.business.ui.theme.Zinc100
 import com.komanda.business.ui.theme.Zinc300
@@ -109,15 +112,15 @@ fun PrinterSettingsScreen(
                     Button(
                         onClick = { showAddNetworkDialog = true },
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Amber400,
-                            contentColor = Zinc950
+                            containerColor = KomandaTokens.AccentTertiary,
+                            contentColor = KomandaTokens.AccentPrimary
                         ),
-                        shape = RoundedCornerShape(2.dp),
-                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                        shape = CircleShape,
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Agregar Impresora de Red", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Agregar Impresora de Red", fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Zinc950)
@@ -197,13 +200,12 @@ private fun PrinterConfigCard(
     onTestPrint: () -> Unit
 ) {
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, Zinc800, RoundedCornerShape(2.dp)),
+        modifier = Modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Zinc900),
-        shape = RoundedCornerShape(2.dp)
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.25.dp, KomandaTokens.PrismRingBrush)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
             // Header: Name, Type Badge, and Actions
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -272,9 +274,13 @@ private fun PrinterConfigCard(
             ) {
                 OutlinedButton(
                     onClick = onTestPrint,
-                    shape = RoundedCornerShape(2.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Zinc300),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, KomandaTokens.Border),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = KomandaTokens.SurfacePill,
+                        contentColor = Zinc300
+                    ),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
                 ) {
                     Icon(Icons.Default.Print, contentDescription = null, modifier = Modifier.size(16.dp), tint = Zinc300)
                     Spacer(modifier = Modifier.width(6.dp))
@@ -288,19 +294,19 @@ private fun PrinterConfigCard(
 @Composable
 private fun TypeBadge(type: PrinterType) {
     val (label, bg, fg) = when (type) {
-        PrinterType.USB_ESC_POS -> Triple("USB", Zinc800, Zinc100)
-        PrinterType.NETWORK_ESC_POS -> Triple("RED TCP", Zinc800, Amber400)
-        PrinterType.BLUETOOTH_ESC_POS -> Triple("BLUETOOTH", Zinc800, Emerald600)
-        PrinterType.TELPO_INTERNAL -> Triple("TELPO", Zinc800, Zinc100)
+        PrinterType.USB_ESC_POS -> Triple("USB", KomandaTokens.SurfacePill, Zinc100)
+        PrinterType.NETWORK_ESC_POS -> Triple("RED TCP", KomandaTokens.SurfacePill, Amber400)
+        PrinterType.BLUETOOTH_ESC_POS -> Triple("BLUETOOTH", KomandaTokens.SurfacePill, Emerald600)
+        PrinterType.TELPO_INTERNAL -> Triple("TELPO", KomandaTokens.SurfacePill, Zinc100)
     }
 
     Box(
         modifier = Modifier
-            .background(bg, RoundedCornerShape(2.dp))
-            .border(1.dp, Zinc700, RoundedCornerShape(2.dp))
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .background(bg, CircleShape)
+            .border(1.dp, KomandaTokens.Border, CircleShape)
+            .padding(horizontal = 10.dp, vertical = 4.dp)
     ) {
-        Text(text = label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = fg)
+        Text(text = label, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = fg)
     }
 }
 
@@ -324,14 +330,15 @@ private fun RoleDropdown(
             },
             onValueChange = {},
             readOnly = true,
+            shape = RoundedCornerShape(16.dp),
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Zinc950,
-                unfocusedContainerColor = Zinc950,
-                focusedBorderColor = Amber400,
-                unfocusedBorderColor = Zinc800,
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White
+                focusedContainerColor = KomandaTokens.SurfaceDeep,
+                unfocusedContainerColor = KomandaTokens.SurfaceDeep,
+                focusedBorderColor = KomandaTokens.AccentTertiary.copy(alpha = 0.45f),
+                unfocusedBorderColor = Zinc700,
+                focusedTextColor = KomandaTokens.TextPrimary,
+                unfocusedTextColor = KomandaTokens.TextPrimary
             ),
             modifier = Modifier
                 .menuAnchor()
@@ -380,14 +387,15 @@ private fun TriggerDropdown(
             },
             onValueChange = {},
             readOnly = true,
+            shape = RoundedCornerShape(16.dp),
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Zinc950,
-                unfocusedContainerColor = Zinc950,
-                focusedBorderColor = Amber400,
-                unfocusedBorderColor = Zinc800,
-                focusedTextColor = Color.White,
-                unfocusedTextColor = Color.White
+                focusedContainerColor = KomandaTokens.SurfaceDeep,
+                unfocusedContainerColor = KomandaTokens.SurfaceDeep,
+                focusedBorderColor = KomandaTokens.AccentTertiary.copy(alpha = 0.45f),
+                unfocusedBorderColor = Zinc700,
+                focusedTextColor = KomandaTokens.TextPrimary,
+                unfocusedTextColor = KomandaTokens.TextPrimary
             ),
             modifier = Modifier
                 .menuAnchor()
@@ -430,36 +438,52 @@ private fun AddNetworkPrinterDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Agregar Impresora de Red", color = Color.White, fontWeight = FontWeight.Bold) },
+        shape = RoundedCornerShape(24.dp),
+        title = { Text("Agregar Impresora de Red", color = KomandaTokens.TextPrimary, fontWeight = FontWeight.Medium) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = name,
                     onValueChange = { name = it },
+                    shape = RoundedCornerShape(16.dp),
                     label = { Text("Nombre descriptivo (ej: Cocina Parrilla)") },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        focusedContainerColor = KomandaTokens.SurfaceDeep,
+                        unfocusedContainerColor = KomandaTokens.SurfaceDeep,
+                        focusedBorderColor = KomandaTokens.AccentTertiary.copy(alpha = 0.45f),
+                        unfocusedBorderColor = Zinc700,
+                        focusedTextColor = KomandaTokens.TextPrimary,
+                        unfocusedTextColor = KomandaTokens.TextPrimary
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = host,
                     onValueChange = { host = it },
+                    shape = RoundedCornerShape(16.dp),
                     label = { Text("Dirección IP (ej: 192.168.1.150)") },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        focusedContainerColor = KomandaTokens.SurfaceDeep,
+                        unfocusedContainerColor = KomandaTokens.SurfaceDeep,
+                        focusedBorderColor = KomandaTokens.AccentTertiary.copy(alpha = 0.45f),
+                        unfocusedBorderColor = Zinc700,
+                        focusedTextColor = KomandaTokens.TextPrimary,
+                        unfocusedTextColor = KomandaTokens.TextPrimary
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = port,
                     onValueChange = { port = it },
+                    shape = RoundedCornerShape(16.dp),
                     label = { Text("Puerto (por defecto 9100)") },
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = Color.White,
-                        unfocusedTextColor = Color.White
+                        focusedContainerColor = KomandaTokens.SurfaceDeep,
+                        unfocusedContainerColor = KomandaTokens.SurfaceDeep,
+                        focusedBorderColor = KomandaTokens.AccentTertiary.copy(alpha = 0.45f),
+                        unfocusedBorderColor = Zinc700,
+                        focusedTextColor = KomandaTokens.TextPrimary,
+                        unfocusedTextColor = KomandaTokens.TextPrimary
                     ),
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -473,9 +497,13 @@ private fun AddNetworkPrinterDialog(
                         onAdd(name, host.trim(), portInt)
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = Amber400, contentColor = Zinc950)
+                shape = CircleShape,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = KomandaTokens.AccentTertiary,
+                    contentColor = KomandaTokens.AccentPrimary
+                )
             ) {
-                Text("Guardar")
+                Text("Guardar", fontWeight = FontWeight.Medium)
             }
         },
         dismissButton = {

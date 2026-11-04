@@ -31,6 +31,9 @@ data class TenantOrderResponse(
     val discountTotal: String = "0.00",
     val total: String = "0.00",
     val currency: String = "ARS",
+    val pickupPin: String? = null,
+    val paymentExpiresAt: String? = null,
+    val tender: String? = null,
     val approvedAt: String? = null,
     val deliveredAt: String? = null,
     val createdAt: String,
@@ -65,6 +68,9 @@ data class TenantOrderResponse(
             discountTotal = discountTotal,
             total = total,
             currency = currency,
+            pickupPin = pickupPin,
+            paymentExpiresAt = paymentExpiresAt,
+            tender = tender,
             approvedAt = approvedAt,
             deliveredAt = deliveredAt,
             createdAt = createdAt,
@@ -84,4 +90,25 @@ data class TenantOrdersListResponse(
 data class TenantOrderEvent(
     val orderId: String,
     val sequence: String
+)
+
+@JsonClass(generateAdapter = true)
+data class TenantOrderResetEvent(
+    val reason: String? = null,
+    val headSequence: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class CollectCashRequest(
+    val authMethod: String,
+    val authCode: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class CollectCashResponse(
+    val orderId: String,
+    val purchaseNumber: Any,
+    val paymentStatus: String = "paid",
+    val paidAt: String? = null,
+    val version: Int? = null
 )

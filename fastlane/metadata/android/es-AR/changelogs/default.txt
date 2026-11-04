@@ -1,0 +1,5 @@
+Primera versión publicada.
+• Toma de pedidos y envío a cocina en tiempo real.
+• Caja: apertura, cierre y cobros en efectivo.
+• Impresión térmica ESC/POS por USB, Bluetooth y red.
+• Tickets, comandas y comprobantes.

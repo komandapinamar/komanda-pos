@@ -1,6 +1,8 @@
 package com.komanda.business.core.auth.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -26,13 +29,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.komanda.business.core.network.MobileTenantDto
-import com.komanda.business.ui.theme.Amber400
-import com.komanda.business.ui.theme.Zinc300
+import com.komanda.business.ui.theme.KomandaTokens
+import com.komanda.business.ui.theme.Zinc100
 import com.komanda.business.ui.theme.Zinc400
 import com.komanda.business.ui.theme.Zinc700
-import com.komanda.business.ui.theme.Zinc800
 import com.komanda.business.ui.theme.Zinc900
 import com.komanda.business.ui.theme.Zinc950
 
@@ -55,18 +58,29 @@ fun TenantSelectionScreen(
                 .widthIn(max = 520.dp)
                 .fillMaxWidth(),
             colors = CardDefaults.cardColors(containerColor = Zinc900),
-            shape = RoundedCornerShape(16.dp)
+            shape = RoundedCornerShape(28.dp),
+            border = BorderStroke(1.25.dp, KomandaTokens.PrismRingBrush)
         ) {
             Column(
                 modifier = Modifier
-                    .padding(24.dp)
+                    .padding(28.dp)
                     .fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
+                    text = "KOMANDA POS",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 0.14.em,
+                    color = Zinc400
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                Text(
                     text = "Seleccionar Restaurante",
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = Zinc300
+                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Medium),
+                    color = Zinc100
                 )
 
                 Text(
@@ -85,8 +99,9 @@ fun TenantSelectionScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onSelectTenant(tenant.id) },
-                            colors = CardDefaults.cardColors(containerColor = Zinc800),
-                            shape = RoundedCornerShape(10.dp)
+                            colors = CardDefaults.cardColors(containerColor = KomandaTokens.SurfaceDeep),
+                            shape = RoundedCornerShape(18.dp),
+                            border = BorderStroke(1.dp, Zinc700)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -99,9 +114,9 @@ fun TenantSelectionScreen(
                                     Text(
                                         text = tenant.name,
                                         style = MaterialTheme.typography.titleMedium.copy(
-                                            fontWeight = FontWeight.SemiBold
+                                            fontWeight = FontWeight.Medium
                                         ),
-                                        color = Zinc300
+                                        color = Zinc100
                                     )
                                     val locationLabel = tenant.primaryLocation?.name
                                         ?: "Sin sucursal asignada"
@@ -115,12 +130,13 @@ fun TenantSelectionScreen(
                                 Text(
                                     text = tenant.role.uppercase(),
                                     style = MaterialTheme.typography.labelSmall.copy(
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.Medium
                                     ),
-                                    color = Amber400,
+                                    color = KomandaTokens.AccentTertiary,
                                     modifier = Modifier
-                                        .background(Zinc700, RoundedCornerShape(4.dp))
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                        .background(KomandaTokens.SurfacePill, CircleShape)
+                                        .border(1.dp, KomandaTokens.Border, CircleShape)
+                                        .padding(horizontal = 10.dp, vertical = 4.dp)
                                 )
                             }
                         }

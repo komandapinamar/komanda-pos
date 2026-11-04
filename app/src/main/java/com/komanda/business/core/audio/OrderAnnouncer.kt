@@ -4,6 +4,7 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.speech.tts.Voice
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +38,10 @@ class OrderAnnouncer(
                 tts?.setLanguage(Locale("es", "ES"))
             }
 
+            // Pick the most natural Spanish voice instead of the engine's default locale
+            // voice, which is usually the flat/robotic one.
+            selectNaturalSpanishVoice()
+
             tts?.setSpeechRate(0.95f) // Slightly slower for clarity in noisy restaurants
             tts?.setPitch(1.0f)
             tts?.setAudioAttributes(
@@ -69,6 +74,53 @@ class OrderAnnouncer(
         } else {
             Log.e(tag, "Failed to initialize TextToSpeech engine. Status: $status")
         }
+    }
+
+    /**
+     * Selects the most natural sounding Spanish voice exposed by the TTS engine.
+     *
+     * On Google TTS (`com.google.android.tts`), generic `*-language` entries resolve to a
+     * compact embedded LSTM voice that sounds flat/robotic, whereas explicit `-x-` neural
+     * voices (especially `-network` Cloud WaveNet/Neural2 voices, which automatically fall
+     * back to the local superpack if offline) produce natural human prosody.
+     */
+    private fun selectNaturalSpanishVoice() {
+        val engine = tts ?: return
+        val candidates = engine.voices
+            ?.filter { it.locale.language.equals("es", ignoreCase = true) }
+            ?.sortedWith(
+                compareByDescending<Voice> { it.quality }
+                    .thenBy { if (it.name.endsWith("-language", ignoreCase = true)) 1 else 0 }
+                    .thenBy { if (it.isNetworkConnectionRequired || it.name.contains("-network", ignoreCase = true)) 0 else 1 }
+                    .thenBy { if (it.name.contains("-x-", ignoreCase = true)) 0 else 1 }
+                    .thenBy { accentRank(it.locale) }
+                    .thenBy { it.latency }
+            )
+            .orEmpty()
+
+        if (candidates.isEmpty()) {
+            Log.w(tag, "TTS engine exposes no Spanish voice; keeping the locale default")
+            return
+        }
+
+        val chosen = candidates.firstOrNull { engine.setVoice(it) == TextToSpeech.SUCCESS }
+        if (chosen != null) {
+            Log.i(
+                tag,
+                "Spanish voice '${chosen.name}' selected " +
+                    "(quality=${chosen.quality}, network=${chosen.isNetworkConnectionRequired})"
+            )
+        } else {
+            Log.w(tag, "No Spanish voice could be applied; keeping the locale default")
+        }
+    }
+
+    private fun accentRank(locale: Locale): Int = when (locale.country.uppercase(Locale.US)) {
+        "AR" -> 0
+        "MX" -> 1
+        "US" -> 2
+        "ES" -> 3
+        else -> 9
     }
 
     /**

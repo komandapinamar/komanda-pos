@@ -6,17 +6,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Amber400,
-    onPrimary = Zinc950,
-    secondary = Zinc400,
-    onSecondary = Color.White,
-    background = Zinc950,
-    onBackground = Color.White,
-    surface = Zinc900,
-    onSurface = Color.White,
-    surfaceVariant = Zinc800,
-    onSurfaceVariant = Zinc400,
-    outline = Zinc700
+    primary = KomandaTokens.AccentTertiary,
+    onPrimary = KomandaTokens.AccentPrimary,
+    secondary = KomandaTokens.TextSecondary,
+    onSecondary = KomandaTokens.TextPrimary,
+    background = KomandaTokens.Background,
+    onBackground = KomandaTokens.TextPrimary,
+    surface = KomandaTokens.Surface,
+    onSurface = KomandaTokens.TextPrimary,
+    surfaceVariant = KomandaTokens.SurfaceVariant,
+    onSurfaceVariant = KomandaTokens.TextSecondary,
+    outline = KomandaTokens.Border
 )
 
 @Composable

@@ -1,7 +1,9 @@
 package com.komanda.business.features.pos.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,6 +32,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -44,11 +48,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.komanda.business.core.network.CatalogItemDto
 import com.komanda.business.features.pos.DirectOrderResult
 import com.komanda.business.features.pos.PosManager
-import com.komanda.business.ui.theme.Amber400
+import com.komanda.business.ui.theme.KomandaTokens
 import com.komanda.business.ui.theme.Red400
 import com.komanda.business.ui.theme.Red700
 import com.komanda.business.ui.theme.Red900
@@ -70,8 +75,10 @@ fun PosScreen(
     val scope = rememberCoroutineScope()
     val categories by posManager.categories.collectAsState()
     val items by posManager.items.collectAsState()
+    val isLoading by posManager.isLoading.collectAsState()
     val quantities by posManager.quantities.collectAsState()
     val customerName by posManager.customerName.collectAsState()
+    val discountCode by posManager.discountCode.collectAsState()
     val notes by posManager.notes.collectAsState()
     val isSubmitting by posManager.submitting.collectAsState()
 
@@ -81,10 +88,85 @@ fun PosScreen(
         posManager.loadCatalog()
     }
 
-    val selectedCount = posManager.selectedCount
+    val totalUnits = remember(quantities) { quantities.values.sum() }
+    val cartSubtotal = remember(items, quantities) {
+        quantities.entries.sumOf { (id, qty) ->
+            val item = items.find { it.id == id }
+            val price = item?.price?.toDoubleOrNull() ?: 0.0
+            price * qty
+        }
+    }
 
     Scaffold(
-        containerColor = Zinc950
+        containerColor = Zinc950,
+        bottomBar = {
+            Surface(
+                color = Zinc900,
+                shadowElevation = 8.dp,
+                border = BorderStroke(1.dp, KomandaTokens.Border)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = if (totalUnits > 0) {
+                                "$totalUnits producto${if (totalUnits != 1) "s" else ""}"
+                            } else {
+                                "Ningún producto seleccionado"
+                            },
+                            color = KomandaTokens.TextPrimary,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                        if (totalUnits > 0 && cartSubtotal > 0) {
+                            Text(
+                                text = "Total: $${cartSubtotal.toLong()}",
+                                color = KomandaTokens.AccentTertiary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+
+                    Button(
+                        onClick = {
+                            errorMessage = null
+                            scope.launch {
+                                val result = posManager.submitDirectOrder()
+                                when (result) {
+                                    is DirectOrderResult.Success -> {
+                                        onOrderCreated()
+                                    }
+                                    is DirectOrderResult.Error -> {
+                                        errorMessage = result.message
+                                    }
+                                }
+                            }
+                        },
+                        enabled = !isSubmitting && totalUnits > 0,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = KomandaTokens.AccentTertiary,
+                            contentColor = KomandaTokens.AccentPrimary,
+                            disabledContainerColor = KomandaTokens.AccentTertiary.copy(alpha = 0.35f),
+                            disabledContentColor = KomandaTokens.AccentPrimary.copy(alpha = 0.5f)
+                        ),
+                        shape = CircleShape,
+                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
+                    ) {
+                        Text(
+                            text = if (isSubmitting) "Creando pedido..." else "Crear pedido directo",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+        }
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
@@ -99,27 +181,33 @@ fun PosScreen(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .background(KomandaTokens.SurfacePill, CircleShape)
+                            .border(1.dp, KomandaTokens.Border, CircleShape)
+                    ) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Volver a pedidos",
-                            tint = Zinc400
+                            tint = Zinc300
                         )
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(14.dp))
                     Column {
                         Text(
-                            text = "Komanda",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 1.sp,
-                            color = Amber400
+                            text = "MOSTRADOR · VENTA DIRECTA",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = 0.12.em,
+                            color = Zinc400
                         )
                         Text(
                             text = "Crear pedido directo",
                             fontSize = 28.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            fontWeight = FontWeight.Medium,
+                            letterSpacing = (-0.02).em,
+                            color = KomandaTokens.TextPrimary
                         )
                     }
                 }
@@ -131,8 +219,8 @@ fun PosScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Red900.copy(alpha = 0.2f), RoundedCornerShape(2.dp))
-                            .border(1.dp, Red700, RoundedCornerShape(2.dp))
+                            .background(Red900.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
+                            .border(1.dp, Red400.copy(alpha = 0.4f), RoundedCornerShape(16.dp))
                             .padding(16.dp)
                     ) {
                         Text(
@@ -148,20 +236,43 @@ fun PosScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(2.dp),
+                    shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = Zinc900),
-                    border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Zinc800))
+                    border = BorderStroke(1.25.dp, KomandaTokens.PrismRingBrush)
                 ) {
                     Column(modifier = Modifier.padding(24.dp)) {
                         Text(
                             text = "Productos",
                             fontSize = 20.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            fontWeight = FontWeight.Medium,
+                            color = KomandaTokens.TextPrimary
                         )
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        if (items.isEmpty()) {
+                        if (isLoading) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 32.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    androidx.compose.material3.CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        color = KomandaTokens.AccentTertiary,
+                                        strokeWidth = 2.dp
+                                    )
+                                    Text(
+                                        text = "Cargando productos...",
+                                        color = Zinc400,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
+                        } else if (items.isEmpty()) {
                             Text(
                                 text = "No hay productos activos en el catálogo.",
                                 color = Zinc400,
@@ -175,10 +286,10 @@ fun PosScreen(
                                     Spacer(modifier = Modifier.height(12.dp))
                                     Text(
                                         text = category.name.uppercase(),
-                                        fontSize = 13.sp,
+                                        fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
-                                        letterSpacing = 1.sp,
-                                        color = Amber400
+                                        letterSpacing = 0.05.em,
+                                        color = KomandaTokens.AccentTertiary
                                     )
                                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -202,10 +313,10 @@ fun PosScreen(
                                 Spacer(modifier = Modifier.height(12.dp))
                                 Text(
                                     text = "VARIOS",
-                                    fontSize = 13.sp,
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    letterSpacing = 1.sp,
-                                    color = Amber400
+                                    letterSpacing = 0.05.em,
+                                    color = KomandaTokens.AccentTertiary
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
 
@@ -230,50 +341,76 @@ fun PosScreen(
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(2.dp),
+                    shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = Zinc900),
-                    border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Zinc800))
+                    border = BorderStroke(1.dp, KomandaTokens.Border)
                 ) {
                     Column(modifier = Modifier.padding(24.dp)) {
                         Text(
                             text = "Datos del cliente",
                             fontSize = 20.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
+                            fontWeight = FontWeight.Medium,
+                            color = KomandaTokens.TextPrimary
                         )
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
-                            text = "Nombre del cliente *",
-                            fontSize = 14.sp,
+                            text = "Nombre del cliente (opcional, por defecto: NN)",
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Zinc300
+                            color = Zinc400
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         OutlinedTextField(
                             value = customerName,
                             onValueChange = { posManager.setCustomerName(it) },
-                            placeholder = { Text("Ej: Juan Pérez", color = Zinc600) },
+                            placeholder = { Text("Ej: Juan Pérez o NN", color = Zinc600) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Amber400,
+                                focusedBorderColor = KomandaTokens.AccentTertiary.copy(alpha = 0.45f),
                                 unfocusedBorderColor = Zinc700,
-                                focusedContainerColor = Zinc800,
-                                unfocusedContainerColor = Zinc800,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
+                                focusedContainerColor = KomandaTokens.SurfaceDeep,
+                                unfocusedContainerColor = KomandaTokens.SurfaceDeep,
+                                focusedTextColor = KomandaTokens.TextPrimary,
+                                unfocusedTextColor = KomandaTokens.TextPrimary
                             ),
-                            shape = RoundedCornerShape(2.dp)
+                            shape = RoundedCornerShape(16.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = "Código de descuento (opcional)",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = Zinc400
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        OutlinedTextField(
+                            value = discountCode,
+                            onValueChange = { posManager.setDiscountCode(it.uppercase()) },
+                            placeholder = { Text("Ej: PROMO10", color = Zinc600) },
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = KomandaTokens.AccentTertiary.copy(alpha = 0.45f),
+                                unfocusedBorderColor = Zinc700,
+                                focusedContainerColor = KomandaTokens.SurfaceDeep,
+                                unfocusedContainerColor = KomandaTokens.SurfaceDeep,
+                                focusedTextColor = KomandaTokens.TextPrimary,
+                                unfocusedTextColor = KomandaTokens.TextPrimary
+                            ),
+                            shape = RoundedCornerShape(16.dp)
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
 
                         Text(
                             text = "Notas del pedido",
-                            fontSize = 14.sp,
+                            fontSize = 13.sp,
                             fontWeight = FontWeight.Medium,
-                            color = Zinc300
+                            color = Zinc400
                         )
                         Spacer(modifier = Modifier.height(6.dp))
                         OutlinedTextField(
@@ -284,75 +421,15 @@ fun PosScreen(
                             maxLines = 4,
                             modifier = Modifier.fillMaxWidth(),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Amber400,
+                                focusedBorderColor = KomandaTokens.AccentTertiary.copy(alpha = 0.45f),
                                 unfocusedBorderColor = Zinc700,
-                                focusedContainerColor = Zinc800,
-                                unfocusedContainerColor = Zinc800,
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White
+                                focusedContainerColor = KomandaTokens.SurfaceDeep,
+                                unfocusedContainerColor = KomandaTokens.SurfaceDeep,
+                                focusedTextColor = KomandaTokens.TextPrimary,
+                                unfocusedTextColor = KomandaTokens.TextPrimary
                             ),
-                            shape = RoundedCornerShape(2.dp)
+                            shape = RoundedCornerShape(16.dp)
                         )
-                    }
-                }
-            }
-
-            // Bottom Action Bar
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(2.dp),
-                    colors = CardDefaults.cardColors(containerColor = Zinc900),
-                    border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Zinc800))
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (selectedCount > 0) {
-                                "$selectedCount producto${if (selectedCount != 1) "s" else ""} seleccionado${if (selectedCount != 1) "s" else ""}"
-                            } else {
-                                "Ningún producto seleccionado"
-                            },
-                            color = Zinc400,
-                            fontSize = 14.sp
-                        )
-
-                        Button(
-                            onClick = {
-                                errorMessage = null
-                                scope.launch {
-                                    val result = posManager.submitDirectOrder()
-                                    when (result) {
-                                        is DirectOrderResult.Success -> {
-                                            onOrderCreated()
-                                        }
-                                        is DirectOrderResult.Error -> {
-                                            errorMessage = result.message
-                                        }
-                                    }
-                                }
-                            },
-                            enabled = !isSubmitting && selectedCount > 0 && customerName.trim().isNotBlank(),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Amber400,
-                                contentColor = Zinc950,
-                                disabledContainerColor = Amber400.copy(alpha = 0.4f),
-                                disabledContentColor = Zinc950.copy(alpha = 0.4f)
-                            ),
-                            shape = RoundedCornerShape(2.dp),
-                            contentPadding = PaddingValues(horizontal = 24.dp, vertical = 14.dp)
-                        ) {
-                            Text(
-                                text = if (isSubmitting) "Creando pedido..." else "Crear pedido directo",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
                     }
                 }
             }
@@ -367,10 +444,12 @@ fun DirectOrderCatalogItemRow(
     onQuantityChange: (Int) -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(2.dp),
-        colors = CardDefaults.cardColors(containerColor = Zinc800),
-        border = CardDefaults.outlinedCardBorder().copy(brush = androidx.compose.ui.graphics.SolidColor(Zinc700))
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onQuantityChange(quantity + 1) },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = KomandaTokens.SurfaceDeep),
+        border = BorderStroke(1.dp, if (quantity > 0) KomandaTokens.AccentTertiary.copy(alpha = 0.35f) else Zinc700)
     ) {
         Row(
             modifier = Modifier
@@ -384,7 +463,7 @@ fun DirectOrderCatalogItemRow(
                     text = item.name,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color.White
+                    color = KomandaTokens.TextPrimary
                 )
                 Text(
                     text = "$${item.price}",
@@ -400,7 +479,8 @@ fun DirectOrderCatalogItemRow(
                 OutlinedButton(
                     onClick = { onQuantityChange(quantity - 1) },
                     enabled = quantity > 0,
-                    shape = RoundedCornerShape(2.dp),
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, KomandaTokens.Border),
                     contentPadding = PaddingValues(0.dp),
                     modifier = Modifier.size(32.dp)
                 ) {
@@ -420,7 +500,8 @@ fun DirectOrderCatalogItemRow(
                 OutlinedButton(
                     onClick = { onQuantityChange(quantity + 1) },
                     enabled = quantity < 50,
-                    shape = RoundedCornerShape(2.dp),
+                    shape = CircleShape,
+                    border = BorderStroke(1.dp, KomandaTokens.Border),
                     contentPadding = PaddingValues(0.dp),
                     modifier = Modifier.size(32.dp)
                 ) {

@@ -8,4 +8,12 @@ local.properties
 /captures
 .externalNativeBuild
 .cxx
+*.apk
+*.aab
+app/release/
 
+# Firma: las claves NUNCA van al repositorio
+keystore.properties
+*.jks
+*.keystore
+*.p12

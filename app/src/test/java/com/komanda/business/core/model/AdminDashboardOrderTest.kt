@@ -3,7 +3,9 @@ package com.komanda.business.core.model
 import com.komanda.business.core.network.TenantOrderLineResponse
 import com.komanda.business.core.network.TenantOrderResponse
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class AdminDashboardOrderTest {
@@ -14,22 +16,24 @@ class AdminDashboardOrderTest {
         assertEquals("Creado por admin", AdminDashboardOrder.sourceLabel("admin_direct"))
         assertEquals("Pago Mercado Pago", AdminDashboardOrder.sourceLabel("mercadopago-webhook"))
         assertEquals("Pago Mercado Pago", AdminDashboardOrder.sourceLabel("mercadopago_webhook"))
+        assertEquals("Efectivo Storefront", AdminDashboardOrder.sourceLabel("storefront_cash"))
+        assertEquals("Efectivo Storefront", AdminDashboardOrder.sourceLabel("storefront-cash"))
         assertEquals("Origen no disponible", AdminDashboardOrder.sourceLabel(null))
         assertEquals("Origen no disponible", AdminDashboardOrder.sourceLabel("unknown"))
     }
 
     @Test
     fun `statusLabel returns exact Spanish label from Next js`() {
-        assertEquals("Aprobado", AdminDashboardOrder.statusLabel("approved"))
-        assertEquals("En preparación", AdminDashboardOrder.statusLabel("preparing"))
-        assertEquals("Listo", AdminDashboardOrder.statusLabel("ready"))
+        assertEquals("Preparando", AdminDashboardOrder.statusLabel("approved"))
+        assertEquals("Preparando", AdminDashboardOrder.statusLabel("preparing"))
+        assertEquals("Listo para entregar", AdminDashboardOrder.statusLabel("ready"))
         assertEquals("Entregado", AdminDashboardOrder.statusLabel("delivered"))
         assertEquals("Cancelado", AdminDashboardOrder.statusLabel("cancelled"))
     }
 
     @Test
     fun `nextStatus returns correct succession from Next js`() {
-        assertEquals("preparing", AdminDashboardOrder.nextStatus("approved"))
+        assertEquals("ready", AdminDashboardOrder.nextStatus("approved"))
         assertEquals("ready", AdminDashboardOrder.nextStatus("preparing"))
         assertEquals("delivered", AdminDashboardOrder.nextStatus("ready"))
         assertNull(AdminDashboardOrder.nextStatus("delivered"))
@@ -38,9 +42,9 @@ class AdminDashboardOrderTest {
 
     @Test
     fun `nextStatusLabel returns exact button label from Next js`() {
-        assertEquals("Preparar", AdminDashboardOrder.nextStatusLabel("approved"))
-        assertEquals("Marcar listo", AdminDashboardOrder.nextStatusLabel("preparing"))
-        assertEquals("Marcar entregado", AdminDashboardOrder.nextStatusLabel("ready"))
+        assertEquals("Listo para entregar", AdminDashboardOrder.nextStatusLabel("approved"))
+        assertEquals("Listo para entregar", AdminDashboardOrder.nextStatusLabel("preparing"))
+        assertEquals("Entregado", AdminDashboardOrder.nextStatusLabel("ready"))
         assertNull(AdminDashboardOrder.nextStatusLabel("delivered"))
         assertNull(AdminDashboardOrder.nextStatusLabel("cancelled"))
     }
@@ -92,5 +96,220 @@ class AdminDashboardOrderTest {
         assertEquals("Gonzalo Perez", ticketPayload.customer.name)
         assertEquals(1, ticketPayload.items.size)
         assertEquals(6000.0, ticketPayload.summary.total, 0.01)
+    }
+
+    @Test
+    fun `isCashPending identifies pending cash orders correctly`() {
+        val baseOrder = AdminDashboardOrder(
+            id = "ord_cash_1",
+            purchaseNumber = "101",
+            status = "approved",
+            paymentStatus = "pending",
+            customer = CustomerInfo(name = "Cliente Efectivo"),
+            source = "storefront_cash",
+            tender = "cash",
+            createdAt = "2026-10-05T12:00:00Z",
+            updatedAt = "2026-10-05T12:00:00Z"
+        )
+        assertTrue(baseOrder.isCashPending)
+
+        // tender cash with another source (e.g. direct order) pending
+        val directCashPending = baseOrder.copy(source = "admin_direct", tender = "cash", paymentStatus = "pending")
+        assertTrue(directCashPending.isCashPending)
+
+        // storefront_cash source even if tender is omitted
+        val storefrontCashNullTender = baseOrder.copy(source = "storefront_cash", tender = null, paymentStatus = "pending")
+        assertTrue(storefrontCashNullTender.isCashPending)
+
+        // paid order is NOT cash pending
+        val paidOrder = baseOrder.copy(paymentStatus = "paid")
+        assertFalse(paidOrder.isCashPending)
+
+        // posnet pending is NOT cash pending
+        val posnetOrder = baseOrder.copy(source = "admin_direct", tender = "posnet", paymentStatus = "pending")
+        assertFalse(posnetOrder.isCashPending)
+
+        // cancelled order is NOT cash pending
+        val cancelledOrder = baseOrder.copy(status = "cancelled", paymentStatus = "pending", tender = "cash")
+        assertFalse(cancelledOrder.isCashPending)
+
+        // delivered order is NOT cash pending
+        val deliveredOrder = baseOrder.copy(status = "delivered", paymentStatus = "pending", tender = "cash")
+        assertFalse(deliveredOrder.isCashPending)
+    }
+
+    @Test
+    fun `minutesRemaining and isPaymentExpired calculate time against paymentExpiresAt`() {
+        // Base epoch: 2026-10-05T12:00:00.000Z = 1791201600000L
+        val nowMillis = 1791201600000L
+        // 45 minutes in future: 2026-10-05T12:45:00.000Z
+        val futureExpiresAt = "2026-10-05T12:45:00.000Z"
+        // 5 minutes in past: 2026-10-05T11:55:00.000Z
+        val pastExpiresAt = "2026-10-05T11:55:00.000Z"
+
+        val activeOrder = AdminDashboardOrder(
+            id = "ord_exp_1",
+            purchaseNumber = "102",
+            status = "approved",
+            paymentStatus = "pending",
+            customer = CustomerInfo(),
+            paymentExpiresAt = futureExpiresAt,
+            createdAt = "2026-10-05T12:00:00Z",
+            updatedAt = "2026-10-05T12:00:00Z"
+        )
+
+        assertEquals(45L, activeOrder.minutesRemaining(nowMillis))
+        assertFalse(activeOrder.isPaymentExpired(nowMillis))
+
+        val expiredOrder = activeOrder.copy(paymentExpiresAt = pastExpiresAt)
+        assertEquals(0L, expiredOrder.minutesRemaining(nowMillis))
+        assertTrue(expiredOrder.isPaymentExpired(nowMillis))
+
+        val nullExpiryOrder = activeOrder.copy(paymentExpiresAt = null)
+        assertNull(nullExpiryOrder.minutesRemaining(nowMillis))
+        assertFalse(nullExpiryOrder.isPaymentExpired(nowMillis))
+    }
+
+    @Test
+    fun `parseIsoTimestamp handles explicit non-UTC offsets and malformed input`() {
+        // 2026-10-05T14:00:00+02:00 === 2026-10-05T12:00:00Z
+        assertEquals(
+            1791201600000L,
+            AdminDashboardOrder.parseIsoTimestamp("2026-10-05T14:00:00+02:00"),
+        )
+        // Equivalent instant with Z
+        assertEquals(
+            1791201600000L,
+            AdminDashboardOrder.parseIsoTimestamp("2026-10-05T12:00:00Z"),
+        )
+        assertNull(AdminDashboardOrder.parseIsoTimestamp("not-a-date"))
+        assertNull(AdminDashboardOrder.parseIsoTimestamp(null))
+    }
+
+    @Test
+    fun `TenantOrderResponse maps paymentExpiresAt and tender to AdminDashboardOrder`() {
+        val dto = TenantOrderResponse(
+            id = "ord_storefront_cash",
+            purchaseNumber = "1084",
+            fulfillmentStatus = "approved",
+            paymentStatus = "pending",
+            source = "storefront_cash",
+            tender = "cash",
+            paymentExpiresAt = "2026-10-05T13:00:00.000Z",
+            pickupPin = "5821",
+            customer = mapOf("name" to "Sofia Rodriguez"),
+            createdAt = "2026-10-05T12:00:00.000Z",
+            updatedAt = "2026-10-05T12:00:00.000Z"
+        )
+
+        val order = dto.toDashboardOrder()
+        assertEquals("ord_storefront_cash", order.id)
+        assertEquals("1084", order.purchaseNumber)
+        assertEquals("approved", order.status)
+        assertEquals("pending", order.paymentStatus)
+        assertEquals("storefront_cash", order.source)
+        assertEquals("cash", order.tender)
+        assertEquals("2026-10-05T13:00:00.000Z", order.paymentExpiresAt)
+        assertEquals("5821", order.pickupPin)
+        assertTrue(order.isCashPending)
+        assertEquals("Efectivo Storefront", AdminDashboardOrder.sourceLabel(order.source))
+    }
+
+    @Test
+    fun `aggregateKitchenProducts sums products across paid kitchen orders and excludes unpaid or ready orders`() {
+        val kitchenOrder1 = AdminDashboardOrder(
+            id = "ord_k1",
+            purchaseNumber = "51",
+            status = "approved",
+            paymentStatus = "paid",
+            customer = CustomerInfo(name = "Cliente 1"),
+            lines = listOf(
+                AdminDashboardLine(
+                    id = "l1",
+                    name = "Pollo Sisu",
+                    quantity = 2,
+                    unitPrice = "4500.00",
+                    lineTotal = "9000.00",
+                    note = "Bien crocante",
+                    options = listOf(AdminDashboardLineOption(name = "Salsa Picante", priceDelta = "500.00", quantity = 1))
+                ),
+                AdminDashboardLine(
+                    id = "l2",
+                    name = "Cookie",
+                    quantity = 1,
+                    unitPrice = "2500.00",
+                    lineTotal = "2500.00"
+                )
+            ),
+            createdAt = "2026-10-05T12:00:00Z",
+            updatedAt = "2026-10-05T12:00:00Z"
+        )
+
+        val kitchenOrder2 = kitchenOrder1.copy(
+            id = "ord_k2",
+            purchaseNumber = "52",
+            status = "preparing",
+            lines = listOf(
+                AdminDashboardLine(
+                    id = "l3",
+                    name = "Pollo Sisu",
+                    quantity = 3,
+                    unitPrice = "4500.00",
+                    lineTotal = "13500.00",
+                    options = listOf(AdminDashboardLineOption(name = "Salsa Picante", priceDelta = "500.00", quantity = 1))
+                )
+            )
+        )
+
+        val unpaidOrder = kitchenOrder1.copy(
+            id = "ord_unpaid",
+            purchaseNumber = "53",
+            paymentStatus = "pending",
+            tender = "cash",
+            lines = listOf(
+                AdminDashboardLine(
+                    id = "l4",
+                    name = "Pollo Sisu",
+                    quantity = 10,
+                    unitPrice = "4500.00",
+                    lineTotal = "45000.00"
+                )
+            )
+        )
+
+        val readyOrder = kitchenOrder1.copy(
+            id = "ord_ready",
+            purchaseNumber = "54",
+            status = "ready",
+            lines = listOf(
+                AdminDashboardLine(
+                    id = "l5",
+                    name = "Quesadillas",
+                    quantity = 4,
+                    unitPrice = "5000.00",
+                    lineTotal = "20000.00"
+                )
+            )
+        )
+
+        assertTrue(kitchenOrder1.isInKitchenStage)
+        assertTrue(kitchenOrder2.isInKitchenStage)
+        assertFalse(unpaidOrder.isInKitchenStage)
+        assertFalse(readyOrder.isInKitchenStage)
+
+        val totals = AdminDashboardOrder.aggregateKitchenProducts(
+            listOf(kitchenOrder1, kitchenOrder2, unpaidOrder, readyOrder)
+        )
+
+        assertEquals(2, totals.size)
+        assertEquals("Pollo Sisu", totals[0].name)
+        assertEquals(5, totals[0].totalQuantity)
+        assertEquals(2, totals[0].orderCount)
+        assertEquals(listOf(KitchenOptionAggregate(name = "Salsa Picante", quantity = 5)), totals[0].options)
+        assertEquals(listOf("#51: Bien crocante"), totals[0].notes)
+
+        assertEquals("Cookie", totals[1].name)
+        assertEquals(1, totals[1].totalQuantity)
+        assertEquals(1, totals[1].orderCount)
     }
 }

@@ -109,7 +109,9 @@ data class OrderEventDto(
 
 @JsonClass(generateAdapter = true)
 data class TransitionOrderRequest(
-    val fulfillmentStatus: String
+    val fulfillmentStatus: String,
+    val pickupPin: String? = null,
+    val reason: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -129,7 +131,8 @@ data class DirectOrderCustomerRequest(
 data class CreateDirectOrderRequest(
     val items: List<DirectOrderItemRequest>,
     val customer: DirectOrderCustomerRequest,
-    val notes: String? = null
+    val notes: String? = null,
+    val discountCode: String? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -203,6 +206,22 @@ data class InvoiceResponse(
     val cae: String,
     val caeDueDate: String,
     val qrData: String
+)
+
+@JsonClass(generateAdapter = true)
+data class RefundCashRequest(
+    val reason: String,
+    val operatorNote: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class RefundCashResponse(
+    val orderId: String,
+    val paymentStatus: String = "refunded",
+    val fulfillmentStatus: String = "cancelled",
+    val refundedAt: String? = null,
+    val cashMovementId: String? = null,
+    val version: Int? = null
 )
 
 @JsonClass(generateAdapter = true)
