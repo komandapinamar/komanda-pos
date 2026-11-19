@@ -26,6 +26,13 @@ class ProjectorCalibrationConfigTest {
     }
 
     @Test
+    fun `visual defaults to the original refill video and resolves persisted names`() {
+        assertEquals(ProjectorVisual.REFILL_VIDEO, ProjectorCalibrationConfig().visual)
+        assertEquals(ProjectorVisual.OCEANO, ProjectorVisual.fromName("OCEANO"))
+        assertEquals(ProjectorVisual.REFILL_VIDEO, ProjectorVisual.fromName("unknown"))
+    }
+
+    @Test
     fun `AUTO shift mode resolves dark hours slots accurately`() {
         assertEquals(
             ProjectorShiftMode.NIGHT_START,

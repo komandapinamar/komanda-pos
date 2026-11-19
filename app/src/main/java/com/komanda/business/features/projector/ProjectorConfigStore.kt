@@ -44,6 +44,35 @@ enum class ProjectorShiftMode(val label: String, val badgeText: String, val spot
 /**
  * Normalized 2D point in [0f..1f] relative to the projector output viewport.
  */
+/** Visual loop shown on the projector floor, on top of a pitch-black surface. */
+enum class ProjectorVisual(val label: String, val description: String) {
+    REFILL_VIDEO(
+        label = "Video Komanda",
+        description = "Loop metálico iridiscente original."
+    ),
+    IRIDESCENTE(
+        label = "Iridiscente",
+        description = "Acero azulado, ámbar y magenta, como el video actual."
+    ),
+    ATARDECER(
+        label = "Atardecer",
+        description = "Ámbar, dorado y naranja cálido."
+    ),
+    OCEANO(
+        label = "Océano",
+        description = "Azul acero, cian y turquesa."
+    ),
+    NEON(
+        label = "Neón",
+        description = "Magenta, violeta y cian eléctrico."
+    );
+
+    companion object {
+        fun fromName(name: String?): ProjectorVisual =
+            entries.firstOrNull { it.name == name } ?: REFILL_VIDEO
+    }
+}
+
 data class NormalizedPoint(
     val x: Float,
     val y: Float
@@ -64,7 +93,8 @@ data class ProjectorCalibrationConfig(
     val autoProjectOnExternalDisplay: Boolean = true,
     val showFloorGridInCalibration: Boolean = true,
     val batchFlashUntilMillis: Long = 0L,
-    val batchFlashHeadline: String = "Recién salido del horno:\nMedialunas J&Q + Cookies"
+    val batchFlashHeadline: String = "Recién salido del horno:\nMedialunas J&Q + Cookies",
+    val visual: ProjectorVisual = ProjectorVisual.REFILL_VIDEO
 ) {
     val corners: List<NormalizedPoint>
         get() = listOf(topLeft, topRight, bottomRight, bottomLeft)
@@ -169,6 +199,10 @@ class ProjectorConfigStore(context: Context) {
         update { it.copy(showFloorGridInCalibration = enabled) }
     }
 
+    fun setVisual(visual: ProjectorVisual) {
+        update { it.copy(visual = visual) }
+    }
+
     fun triggerBatchFlash(durationMillis: Long = 10_000L, headline: String? = null) {
         val until = System.currentTimeMillis() + durationMillis
         update {
@@ -214,7 +248,8 @@ class ProjectorConfigStore(context: Context) {
                 .coerceIn(0.90f, 1.60f),
             shiftMode = shift,
             autoProjectOnExternalDisplay = prefs.getBoolean("auto_project", true),
-            showFloorGridInCalibration = prefs.getBoolean("show_floor_grid", true)
+            showFloorGridInCalibration = prefs.getBoolean("show_floor_grid", true),
+            visual = ProjectorVisual.fromName(prefs.getString("visual", ProjectorVisual.REFILL_VIDEO.name))
         )
     }
 
@@ -232,6 +267,7 @@ class ProjectorConfigStore(context: Context) {
             .putString("shift_mode", cfg.shiftMode.name)
             .putBoolean("auto_project", cfg.autoProjectOnExternalDisplay)
             .putBoolean("show_floor_grid", cfg.showFloorGridInCalibration)
+            .putString("visual", cfg.visual.name)
             .apply()
     }
 

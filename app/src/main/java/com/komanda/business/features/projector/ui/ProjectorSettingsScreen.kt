@@ -70,6 +70,7 @@ import com.komanda.business.features.projector.ProjectorCalibrationConfig
 import com.komanda.business.features.projector.ProjectorConfigStore
 import com.komanda.business.features.projector.ProjectorDisplayController
 import com.komanda.business.features.projector.ProjectorShiftMode
+import com.komanda.business.features.projector.ProjectorVisual
 import com.komanda.business.ui.theme.KomandaTokens
 import com.komanda.business.ui.theme.Zinc300
 import com.komanda.business.ui.theme.Zinc400
@@ -388,6 +389,76 @@ fun ProjectorSettingsScreen(
                                 )
                             }
                         }
+                    }
+                }
+            }
+
+            // 1b. SELECTOR DE ANIMACIÓN / VIDEO DEL PISO
+            item {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = Zinc900),
+                    border = BorderStroke(1.dp, KomandaTokens.Border)
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth().padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        Column {
+                            Text(
+                                text = "Animación del piso",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = KomandaTokens.TextPrimary
+                            )
+                            Text(
+                                text = "Elegí el loop que se proyecta en el piso. Las animaciones funcionan sin internet.",
+                                fontSize = 13.sp,
+                                color = Zinc400
+                            )
+                        }
+
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            ProjectorVisual.entries.forEach { visual ->
+                                val selected = config.visual == visual
+                                if (selected) {
+                                    Button(
+                                        onClick = { configStore.setVisual(visual) },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = KomandaTokens.AccentSecondary,
+                                            contentColor = KomandaTokens.AccentPrimary
+                                        ),
+                                        shape = CircleShape,
+                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                    ) {
+                                        Text(visual.label, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                                    }
+                                } else {
+                                    OutlinedButton(
+                                        onClick = { configStore.setVisual(visual) },
+                                        colors = ButtonDefaults.outlinedButtonColors(
+                                            containerColor = KomandaTokens.SurfacePill,
+                                            contentColor = Zinc300
+                                        ),
+                                        border = BorderStroke(1.dp, KomandaTokens.Border),
+                                        shape = CircleShape,
+                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                                    ) {
+                                        Text(visual.label, fontSize = 13.sp)
+                                    }
+                                }
+                            }
+                        }
+
+                        Text(
+                            text = config.visual.description,
+                            fontSize = 13.sp,
+                            color = Zinc400
+                        )
                     }
                 }
             }

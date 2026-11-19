@@ -5,6 +5,12 @@ import android.graphics.SurfaceTexture
 import android.media.MediaPlayer
 import android.view.Surface
 import android.view.TextureView
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -36,6 +42,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
@@ -56,7 +64,11 @@ import com.komanda.business.core.model.AdminDashboardOrder
 import com.komanda.business.core.model.OrderStatuses
 import com.komanda.business.core.network.ConnectionState
 import com.komanda.business.features.projector.ProjectorCalibrationConfig
+import com.komanda.business.features.projector.ProjectorVisual
 import com.komanda.business.ui.theme.KomandaTokens
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.sin
 import kotlinx.coroutines.delay
 
 /**
@@ -188,9 +200,16 @@ fun ProjectorFloorCanvas(
                 val availableHeight = contentMaxHeight - sDp(10f) - textReserve
                 val videoWidth = minOf(contentMaxWidth - sDp(12f), availableHeight * videoRatio)
                 val videoHeight = videoWidth / videoRatio
-                RefillLoopVideo(
-                    modifier = Modifier.size(videoWidth, videoHeight)
-                )
+                if (config.visual == ProjectorVisual.REFILL_VIDEO) {
+                    RefillLoopVideo(
+                        modifier = Modifier.size(videoWidth, videoHeight)
+                    )
+                } else {
+                    AnimatedGradientVisual(
+                        palette = projectorPalette(config.visual),
+                        modifier = Modifier.size(videoWidth, videoHeight)
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(sDp(10f)))
 
@@ -318,6 +337,81 @@ fun ProjectorFloorCanvas(
                     )
                 )
             }
+        }
+    }
+}
+
+/** Color sets inspired by the iridescent metallic Refill loop (steel, amber, magenta). */
+private fun projectorPalette(visual: ProjectorVisual): List<Color> = when (visual) {
+    ProjectorVisual.REFILL_VIDEO -> emptyList()
+    ProjectorVisual.IRIDESCENTE -> listOf(
+        Color(0xFF8FA9BC), // acero azulado
+        Color(0xFFD9A85C), // ámbar
+        Color(0xFFE07BA8), // magenta
+        Color(0xFFA9D6E5), // cian
+        Color(0xFFE8DCC8), // plata
+    )
+    ProjectorVisual.ATARDECER -> listOf(
+        Color(0xFFF2A65A),
+        Color(0xFFE8763A),
+        Color(0xFFD94F4F),
+        Color(0xFFFFD9A0),
+        Color(0xFFB23A48),
+    )
+    ProjectorVisual.OCEANO -> listOf(
+        Color(0xFF6FA8C9),
+        Color(0xFF4FD1C5),
+        Color(0xFF2B6CB0),
+        Color(0xFFA9E5E5),
+        Color(0xFF3C5A78),
+    )
+    ProjectorVisual.NEON -> listOf(
+        Color(0xFFF472B6),
+        Color(0xFFA855F7),
+        Color(0xFF22D3EE),
+        Color(0xFF818CF8),
+        Color(0xFFEC4899),
+    )
+}
+
+/** Slow, seamless drifting gradient blobs over black; safe offline and light on the projector. */
+@Composable
+private fun AnimatedGradientVisual(
+    palette: List<Color>,
+    modifier: Modifier = Modifier
+) {
+    val transition = rememberInfiniteTransition(label = "floor-gradient")
+    val phase by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 18_000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "floor-gradient-phase"
+    )
+    Canvas(modifier.background(Color.Black)) {
+        drawRect(Color.Black)
+        val w = size.width
+        val h = size.height
+        val radius = max(w, h) * 0.62f
+        val fullTurn = 2f * Math.PI.toFloat()
+        palette.forEachIndexed { index, color ->
+            val angle = phase * fullTurn + index * (fullTurn / palette.size)
+            val xFactor = 1 + index % 2
+            val yFactor = 1 + (index + 1) % 2
+            val cx = w * (0.5f + 0.26f * cos(angle * xFactor))
+            val cy = h * (0.5f + 0.26f * sin(angle * yFactor))
+            drawCircle(
+                brush = Brush.radialGradient(
+                    colors = listOf(color.copy(alpha = 0.78f), Color.Transparent),
+                    center = Offset(cx, cy),
+                    radius = radius
+                ),
+                radius = radius,
+                center = Offset(cx, cy),
+                blendMode = BlendMode.Screen
+            )
         }
     }
 }
