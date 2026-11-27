@@ -1,0 +1,50 @@
+@font-face { font-family: Geist; src: local("Geist"), local("Manrope"); font-display: swap; }
+:root { font-family: Geist, system-ui, sans-serif; color: #eee; background: #000; }
+* { box-sizing: border-box; }
+body { margin: 0; overflow: hidden; }
+button, input { font: inherit; }
+#scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#controls { position: relative; height: 100svh; min-height: 560px; pointer-events: none; padding: 40px 48px; }
+header { display: flex; align-items: center; justify-content: space-between; }
+.wordmark { font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: -1px; }
+.dot { margin-left: 4px; color: #d6fa92; font-size: 12px; }
+.eyebrow, footer, #performance, .spectrum { font-size: 12px; line-height: 16px; letter-spacing: 2px; color: #999; }
+.intro { position: absolute; top: 22%; left: 48px; max-width: 440px; }
+h1 { font-size: 60px; line-height: 1; font-weight: 500; letter-spacing: -3px; margin: 24px 0; text-wrap: balance; }
+.intro p { color: #999; font-size: 14px; line-height: 20px; text-wrap: pretty; }
+.console { position: absolute; bottom: 80px; left: 48px; width: min(560px, calc(100vw - 96px)); padding: 24px; background: #181818eb; border: 1px solid #313131; border-radius: 16px; pointer-events: auto; }
+.console-top { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+#performance { letter-spacing: 0; color: #b6ce98; }
+.presets, .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+button { cursor: pointer; padding: 8px 12px; border: 1px solid #313131; border-radius: 8px; background: #1f1f1f; color: #bbb; font-size: 14px; line-height: 20px; font-weight: 600; transition: background 700ms cubic-bezier(.32,.72,0,1), color 700ms cubic-bezier(.32,.72,0,1); }
+button:hover { background: #313131; color: #fff; }
+button:active { transform: scale(.98); }
+button[aria-pressed=true] { color: #d6fa92; border-color: #71834e; background: #272727; }
+:focus-visible { outline: 2px solid #d6fa92; outline-offset: 4px; }
+button:disabled { opacity: .4; cursor: default; }
+.intensity { display: flex; gap: 16px; align-items: center; margin: 16px 0; font-size: 14px; line-height: 20px; color: #aaa; }
+.intensity input { flex: 1; min-width: 40px; accent-color: #d6fa92; }
+output { font-variant-numeric: tabular-nums; }
+#status { font-size: 12px; line-height: 16px; color: #aaa; margin: 16px 0 0; }
+.spectrum { position: absolute; right: 48px; bottom: 96px; width: 128px; }
+.spectrum div { margin-top: 16px; }
+.spectrum i { display: block; width: 100%; height: 2px; background: #272727; margin-top: 8px; }
+.spectrum b { display: block; width: 0; height: 100%; background: #d6fa92; }
+footer { position: absolute; bottom: 24px; left: 48px; right: 48px; display: flex; justify-content: space-between; letter-spacing: 1px; font-size: 12px; line-height: 16px; }
+#error { position: fixed; top: 40%; left: 10%; right: 10%; padding: 24px; background: #181818; border: 1px solid #313131; border-radius: 16px; }
+.embedded #controls { display: none; }
+@media (max-width: 1000px) {
+  #controls { padding: 24px; }
+  header .eyebrow, .spectrum, footer span:last-child { display: none; }
+  .intro { top: 12%; left: 24px; }
+  h1 { font-size: 36px; line-height: 40px; letter-spacing: -1px; margin: 16px 0; }
+  .intro p { display: none; }
+  .console { left: 24px; bottom: 64px; width: calc(100vw - 48px); padding: 16px; }
+  footer { left: 24px; right: 24px; }
+}
+@media (max-height: 700px) and (min-width: 801px) {
+  .intro { top: 18%; }
+  h1 { font-size: 48px; }
+  .intro p { display: none; }
+  .console { bottom: 64px; }
+}

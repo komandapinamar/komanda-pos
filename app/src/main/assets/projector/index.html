@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="color-scheme" content="dark">
+  <title>Komanda · Materia</title>
+  <link rel="stylesheet" href="visualizer.css">
+  <script src="visualizer.js" defer></script>
+</head>
+<body>
+  <canvas id="scene" aria-label="Escultura líquida generativa en movimiento"></canvas>
+  <main id="controls">
+    <header><span class="wordmark">komanda<span class="dot">●</span></span><span class="eyebrow">ESTUDIO VISUAL / 001</span></header>
+    <section class="intro">
+      <span class="eyebrow">MATERIA EN MOVIMIENTO</span>
+      <h1>El sonido<br>toma forma.</h1>
+      <p>Una escultura de luz, metal y frecuencia.<br>Generada en tiempo real, no es un video.</p>
+    </section>
+    <section class="console" aria-label="Controles del visualizador">
+      <div class="console-top"><span class="eyebrow">MATERIA / LIVE RENDER</span><span id="performance">INICIANDO</span></div>
+      <div class="presets" role="group" aria-label="Paleta">
+        <button data-palette="0" aria-pressed="true">01 · Cromo</button>
+        <button data-palette="1" aria-pressed="false">02 · Ámbar</button>
+        <button data-palette="2" aria-pressed="false">03 · Glaciar</button>
+      </div>
+      <label class="intensity">Intensidad <input id="intensity" type="range" min="0.2" max="1.5" step="0.05" value="0.8"><output id="intensity-value">0.80</output></label>
+      <div class="actions">
+        <button id="demo" aria-pressed="false">Probar pulso demo</button>
+        <button id="microphone">Usar micrófono</button>
+        <button id="fullscreen">Pantalla completa ↗</button>
+        <button id="pause" aria-pressed="false">Pausar</button>
+      </div>
+      <p id="status" role="status">Modo ambiente. Sin audio conectado.</p>
+    </section>
+    <aside class="spectrum" aria-label="Energía por banda">
+      <div><span>GRAVES</span><i><b id="bass"></b></i></div>
+      <div><span>MEDIOS</span><i><b id="mid"></b></i></div>
+      <div><span>AGUDOS</span><i><b id="high"></b></i></div>
+    </aside>
+    <footer><span>PROTOTIPO · SHADER ORIGINAL</span><span>ANÁLISIS LOCAL · SIN GRABAR AUDIO</span></footer>
+  </main>
+  <p id="error" role="alert" hidden></p>
+  <script>if (new URLSearchParams(location.search).has('embedded')) document.body.classList.add('embedded');</script>
+</body>
+</html>
