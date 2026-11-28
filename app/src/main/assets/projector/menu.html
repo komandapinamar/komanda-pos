@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="color-scheme" content="dark">
+  <title>Komanda · Vista previa del menú</title>
+  <link rel="stylesheet" href="menu.css">
+  <script src="menu.js" defer></script>
+</head>
+<body>
+  <main id="controls">
+    <header><span class="wordmark">komanda<span class="dot">●</span></span><span class="eyebrow">ESTUDIO VISUAL / 001</span></header>
+    <section class="intro">
+      <span class="eyebrow">PREVISUALIZACIÓN DEL MENÚ</span>
+      <h1>Vista previa<br>del menú.</h1>
+      <p>Paletas, intensidad y pantalla completa.<br>Previsualización local, sin recursos remotos.</p>
+    </section>
+    <section class="console" aria-label="Previsualización del menú">
+      <div class="console-top"><span class="eyebrow">PREVISUALIZACIÓN</span><span id="performance">SOLO UI</span></div>
+      <div class="presets" role="group" aria-label="Paleta">
+        <button data-palette="0" aria-pressed="true">01 · Cromo</button>
+        <button data-palette="1" aria-pressed="false">02 · Ámbar</button>
+        <button data-palette="2" aria-pressed="false">03 · Glaciar</button>
+      </div>
+      <label class="intensity">Intensidad <input id="intensity" type="range" min="0.2" max="1.5" step="0.05" value="0.8"><output id="intensity-value">0.80</output></label>
+      <div class="actions">
+        <button id="fullscreen">Pantalla completa ↗</button>
+      </div>
+      <p id="status" role="status">Vista previa del menú.</p>
+    </section>
+    <footer><span>PREVISUALIZACIÓN · MENÚ</span><span>SOLO UI · SIN RED</span></footer>
+  </main>
+</body>
+</html>
